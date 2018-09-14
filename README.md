@@ -7,5 +7,5 @@ Created: September 2018
 - JPEG Baseline Model Decoder and Encoder with Implementation of TCM
 
 ### Prerequisites
-- Enviornment: C++ 11
+- Enviornment: C++
 - IDE: Visual Studio 2017 (Windows), XCode (MAC OS)
