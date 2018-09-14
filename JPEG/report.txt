@@ -1,0 +1,64 @@
+Goose:
+=====
+1024
+
+GrayScale
+Hello, World!
+Yc is: 25956
+Display Window
+
+Outlier
+Hello, World!
+Yc is: 24932
+Display Window
+
+==
+
+Cheetah:
+========
+6362
+
+GrayScale
+Yc Gray is: 28221
+
+Outlier
+Yc TCM is: 20013
+
+==================
+Hossam Amer
+=================
+Code References:
+==================
+http://imrannazar.com/Let%27s-Build-a-JPEG-Decoder%3A-Huffman-Tables
+https://github.com/amirduran/jpeg-encoder-decoder/blob/master/jpegdecode.cpp
+http://www.xbdev.net/image_formats/jpeg/jpeg_decoder_source/
+
+Link explaining the steps for the decoding process:
+https://www.ece.ucdavis.edu/cerl/reliablejpeg/compression/
+
+//   [www.es.ele.tue.nl/mininoc/doc/report_sander_stuijk.pdf] An image can be separated in a number of color components. This result in a set of grayscale images describing the tone of the colors in the image. When an image is, for instance, separated into its red, green and blue components, you obtain three grayscale images describing the red, blue and green tones in the image. Every grayscale image describing a tone can be divided smaller parts using a grid of 8 by 8 pixels. This array of 8x8 sample values is called a block in the JPEG standard. We use the same definition for the word block in this report. An MCU is now defined as the smallest number of blocks, which contains all samples of every component in the scan that describe a certain region of the image. Depending on the horizontal and vertical sampling factors of every color component it may be necessary to take one or more blocks of that component into a MCU. The maximum number of blocks in a MCU is however limited by the standard to at most ten. Figure 2-3 illustrates the definitions of a block and a minimal coded unit. The original image has been separated into the color components red, green and blue. The top-left group of 8x8 of sample values of the red color component of the image is called block 1.
+
+//    *1x1 chroma subsampling (Cb and Cr values are taken at every pixel) *2x1 chroma subsampling (For every 2x2 block of pixels, the Cb and Cr values are taken from one 2x1 column) *2x2 chroma subsampling (For every 2x2 block of pixels, the Cb and Cr values are only taken from one pixel). 2x2 is the most common for JPEG, and it is the one that seems to be used by MS Paint.
+
+Auxilary links:
+
+JPEG standard:
+https://www.w3.org/Graphics/JPEG/itu-t81.pdf
+
+
+https://github.com/enmasse/jpeg_read/blob/master/jpeg_read.py
+
+looks like a good version:
+https://sourceforge.net/projects/jpegdecoder/
+
+http://lukas-polok.cz/proj_tinyjpeg.htm
+
+libjpeg
+http://ijg.org/files/
+
+
+https://github.com/nmayorov/jpeg-decoder
+
+
+https://stackoverflow.com/questions/35497075/chroma-subsampling-algorithm-for-jpeg
+
