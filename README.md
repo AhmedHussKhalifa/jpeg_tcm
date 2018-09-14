@@ -1,5 +1,5 @@
 # JPEG with Transparent Composite Model (TCM)
-Authors: Hossam Amer and Yanbing Jiang
+Authors: Hossam Amer (@HossamAmer12) and Yanbing Jiang (@YanbingJiang)
 
 Created: September 2018
 
