@@ -136,9 +136,9 @@ public:
     unsigned char precision; // Precison of elements (8 or 12 bits) // not used
     
     // Data needed for decoding
-    vector<Component> components;
+    vector <Component> components;
     vector <QuantizationTable> quantizationTables;
-    vector<HuffmanTable*> huffmanTables;
+    vector <HuffmanTable*> huffmanTables;
     HuffmanTable* componentTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
     HuffmanTable* componentTablesAC[ETF_FORMAT_MAX_COMPONENTS];
     bool endOfFile;
@@ -146,8 +146,8 @@ public:
     
 	bool progressive_Huff_Format = false; // is progressive_Huff_Format
     bool losslessFormat; // is lossless format or lossy
-    unsigned char zigZagStart, zigZagEnd;
-    unsigned char approximationH, approximationL;
+    int zigZagStart, zigZagEnd;
+    int approximationH, approximationL;
     int *scanLineCache[ETF_FORMAT_MAX_COMPONENTS];
     
     
@@ -174,8 +174,15 @@ public:
     uint_16 jpegImageWidth, jpegImageHeight;
 	int upscale_height;
 	int upscale_width;
-	int mcu_width;
-	int mcu_height;
+	int mcu_width, mcu_height;
+    int mcu_cols, mcu_rows;
+
+	// CHANGES FOR PROGRESSIVE MODE -------------------
+	uint_8  numberOfComponents;
+	vector<uint_8> componentID;
+	int counter_progressive = 0;
+	vector<vector <int> > data_DCT;
+
 	int total_block_Y, total_block_C;
 	int count_block_Y, count_block_Cb, count_block_Cr;
     int jpegImageSamplePrecision; // 8 or 12 bits (frame header)
@@ -202,7 +209,11 @@ public:
 	
 	// TODO: Support intervleaving order of YCbCr pixels
     void readImageEntryPoint();
+    void readProgressiveImageEntryPoint();
     void decode_mcu(int componentWidth, int componentHeight, int currentX, int currentY);
+	// FOR PROGRESSIVE
+	void decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID);
+
     void process_huffmann_data_unit(int currentComponent, int currentX, int currentY);
     // Decodes single 8x8 block
     void decode_single_block(int offset, int stride, int currentComponent, uint_8* outputBuf,

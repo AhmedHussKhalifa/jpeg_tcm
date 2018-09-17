@@ -231,7 +231,14 @@ int jpeg_decoder::parseSeg()
             
             // Scan starts immediately after header
             // Try a new approach
-            readImageEntryPoint();
+			if (progressive_Huff_Format) {
+				readImageEntryPoint(); //readProgressiveImageEntryPoint(); 
+				counter_progressive++;
+			}
+			else {
+				readImageEntryPoint();
+			}
+			
             break;
             
             // Any other segment has a length specified at its start,
@@ -632,11 +639,17 @@ uint_16 jpeg_decoder::readFrameHeader(uint_16 headerLengthFromBitStream)
 	mcu_width  = 8 * maxHFactor;
 	mcu_height = 8 * maxVFactor;
 
+    //set the mcu cols and rows
+    mcu_rows = (jpegImageHeight + mcu_height - 1) / mcu_height ;
+    mcu_cols = (jpegImageWidth  + mcu_width - 1) / mcu_width ;
+
 	// Calculate the upscaled width and height to be N multiples of the MCU size:
 
 	// Upscaled width and height
 	upscale_width =  ceil(1.0* jpegImageWidth / mcu_width) * mcu_width;
 	upscale_height = ceil(1.0* jpegImageHeight / mcu_height) * mcu_height;
+
+
 	
 	// TODO: unsed remove this
 	total_block_Y = upscale_height * upscale_width / 64;
@@ -644,7 +657,7 @@ uint_16 jpeg_decoder::readFrameHeader(uint_16 headerLengthFromBitStream)
     
 #if PRINT_FRAME_HEADER_SOF
     // Header Length
-    cout << "============= MARKER: SOF0" << endl;
+    cout << "============= MARKER: SOF" << endl;
     cout << "Header Length: " << headerLengthFromBitStream << endl;
     printf("Sample precision: %d\n", jpegImageSamplePrecision);
     cout << "Has subsampling: " << boolalpha << hasSubSampling << endl;
@@ -695,8 +708,8 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     // bytes Read
     int bytes_read = 2; // 2 bytes for the length
     
-    // number of components
-    uint_8  numberOfComponents = fgetc(fp);
+    // number of components //Ns in standard
+	numberOfComponents = fgetc(fp);
     
     // Increment bytes_read
     bytes_read += 3;
@@ -706,11 +719,12 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
         return JPEG_SEG_ERR;
     }
     
-    if (numberOfComponents != this->components.size()) {
+	// For progressive: potential 1 component per scan...
+    /*if (numberOfComponents != this->components.size()) {
         cout << "Number of components in SOS header is" << numberOfComponents << ", but in SOF header is " << this->components.size();
         cout << " -- We will trust SOF header, but this probably wont work :(" << endl;
         numberOfComponents = this->components.size();
-    }
+    }*/
     
     if (numberOfComponents > ETF_FORMAT_MAX_COMPONENTS) {
         cout << "Specified " << numberOfComponents << " components, maximum is " << ETF_FORMAT_MAX_COMPONENTS;
@@ -720,17 +734,20 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     
     // Read components and their huffman tables
     for (int i = 0; i < numberOfComponents; ++i) {
-        uint_8 componentID = fgetc(fp);
+        componentID.push_back(fgetc(fp));
         uint_8 tableID = fgetc(fp);
         
         // Increment bytes_read
         bytes_read +=2;
         
         // Check component in components list
-        if(this->components.at(i).componentID != componentID){
-            cout << "Component ID in SOS header is " << componentID << ", but in SOF header is " << this->components[i].componentID;
-            cout << " -- We will trust SOF header" << endl;
-        }
+		if (!progressive_Huff_Format) {
+			if (this->components.at(i).componentID != componentID[i]) {
+				cout << "Component ID in SOS header is " << componentID[i] << ", but in SOF header is " << this->components[i].componentID;
+				cout << " -- We will trust SOF header" << endl;
+			}
+		}
+        
         
         // Find AC and DC Huffman table in tables list
         uint_8 tableDC = tableID >> 4; // left most part
@@ -790,17 +807,18 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     
     
     // Start and end point for zig-zag coding
-    zigZagStart = fgetc(fp);
-    zigZagEnd   = fgetc(fp);
-    
+    zigZagStart = fgetc(fp); // Ss in standard
+    zigZagEnd   = fgetc(fp); // Se in standard
+	//cout << zigZagStart << "  " << zigZagEnd << endl;
     // Increment bytes_read
     bytes_read += 2;
     
     // TODO: Bit approximation for progressive JPEG
-    unsigned char dummy;
-    dummy = fgetc(fp);
-    approximationH = dummy >> 4;
-    approximationL = dummy & 0x0F;
+    //unsigned char dummy;
+    uint_8 ssa; 
+    ssa = fgetc(fp);
+    approximationH = ssa >> 4;    // Ah in standard
+    approximationL = ssa & 0x0F;  // Al in standard
     // Increment bytes_read
     bytes_read ++;
     
@@ -808,6 +826,7 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     cout << "============= MARKER: SOS" << endl;
     cout << "Header Length: " << headerLength << endl;
     cout << "Zigzag start: " << static_cast<int>(zigZagStart) << ", ZigZag End: " << static_cast<int>(zigZagEnd) << endl;
+	cout << "Successive approximation bit position HIGH: " << static_cast<int>(approximationH) << ", Successive approximation LOW: " << static_cast<int>(approximationL) << endl;
     printf("Number of components in scan: %d\n", numberOfComponents);
     
     for(int i = 0; i < numberOfComponents; ++i){
@@ -820,10 +839,13 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     return bytes_read-2;
 }
 
+void jpeg_decoder::readProgressiveImageEntryPoint() {
+}
+
 void jpeg_decoder::readImageEntryPoint() {
     
     if (losslessFormat) {
-        // TODO: lossless format is not really supported here, but I added the code for it
+        // TODO: lossless format is not supported here, but I added the code for it
         // Predictor requires to hold last line in memory
         //        for (uint i=0; i<components.size(); i++)
         //            scanLineCache[i] = new int[jpegImageWidth];
@@ -919,7 +941,8 @@ void jpeg_decoder::readImageEntryPoint() {
     for (int y = 0 ; y < jpegImageHeight; y+=ystride_by_mcu){
         for (int x = 0; x < jpegImageWidth; x+=xstride_by_mcu){
             // Decode the MCU plane
-			decode_mcu(hFactor, vFactor, x, y);
+			if (!progressive_Huff_Format) decode_mcu(hFactor, vFactor, x, y);
+			else decode_mcu_progressive(hFactor, vFactor, x, y, componentID);
 			// cout << x << "---" << y << endl;
 #if PRINT_BLOCK_PROGRESS
             cout << "Block " << (block_number++) << " is done!"  << endl;
@@ -964,6 +987,45 @@ void jpeg_decoder::readImageEntryPoint() {
 //  |---+---|
 //  | 3 | 4 |
 //  '-------'
+
+void jpeg_decoder::decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID) {
+
+	for (int m = 0; m < componentID.size(); ++m) {
+		if (componentID[m] == 1) {
+			for (int y = 0; y < componentHeight; ++y)
+			{
+				for (int x = 0; x < componentWidth; ++x)
+				{
+					int stride = componentHeight * 8;
+					int offset = x * 8 + y * 64 * componentWidth;
+					// Y component: (a data unit for huffman is an 8x8 block)
+					process_huffmann_data_unit(COMPONENT_Y, currentX, currentY);
+					decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
+					count_block_Y++;
+				} // end inner loop
+			} // end outer loop
+		}
+		else if (componentID[m] == 2) {
+			int stride = 8;
+			int offset = 0;
+
+			// Cb 
+			process_huffmann_data_unit(COMPONENT_Cb, currentX, currentY);
+			decode_single_block(offset, stride, COMPONENT_Cb, m_Cb, currentX, currentY);
+		}
+		else {
+			int stride = 8;
+			int offset = 0;
+
+			// Cr:
+			process_huffmann_data_unit(COMPONENT_Cr, currentX, currentY);
+			decode_single_block(offset, stride, COMPONENT_Cr, m_Cr, currentX, currentY);
+		}
+	}
+	componentID.clear(); // Clear the ID vector for next use
+} // end decode_mcu_progressive
+//---------------------------------------------------------------------------------------------------
+
 void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int currentX, int currentY) {
     for (int y = 0; y < componentHeight; ++y )
     {
@@ -974,8 +1036,7 @@ void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int curren
             
             // Y component: (a data unit for huffman is an 8x8 block)
             process_huffmann_data_unit(COMPONENT_Y, currentX, currentY);
-            
-            decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
+			decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
 			count_block_Y++;
             
         } // end inner loop
@@ -983,7 +1044,7 @@ void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int curren
     
 
     // The rest of the components if they exist:
-    for(int iComponent = 1; iComponent < components.size(); ++iComponent)
+	for (int iComponent = 1; iComponent < numberOfComponents; ++iComponent) //components.size()
     {
 		
         int stride = 8;
@@ -1089,7 +1150,7 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
                 
 #if DEBUGLEVEL > 50
                 //cout << "Component: " << currentComponent  << ", DC coefficient is: " << DCT_tcoeff[0] << " and prev DC coeff is updated" << endl;
-				if (ftell(fp) >= 1930) {
+				//if (ftell(fp) >= 1930) {
 					cout << "DC Postion in Byte: " << ftell(fp) << endl;
 					cout << "Code: " << code << " -- Length: " << codeLength << endl;
 					printf("Code: %X \n", code);
@@ -1098,7 +1159,7 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
 					cout << std::dec << "DC coeff: " << DCT_tcoeff[0] << endl;
 					cout << "residual DC: " << residualDC << endl;
 					cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
-				}
+				//}
 #endif
 				
 				
@@ -1119,7 +1180,12 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
     
     // No AC coefficients required?
     if (ACcount == 0 || losslessFormat){
-        cout << "-|- ##ERROR## (ACcount == 0 || losslessFormat) No AC coefficients reading is required! " << endl;
+        // cout << "-|- ##ERROR## (ACcount == 0 || losslessFormat) No AC coefficients reading is required! " << endl;
+		Component comp = components.at(currentComponent);
+		for (int j = zigZagStart; j <= zigZagEnd; ++j)
+		{
+			comp.m_DCT[j] = DCT_tcoeff[j];
+		}
         return;
     }
     
@@ -1230,7 +1296,7 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
     
     // We've decoded a block of data, so copy it across to our buffer
     Component comp = components.at(currentComponent);
-    for (int j = 0; j < 64; ++j)
+	for (int j = zigZagStart; j <= zigZagEnd; ++j)
     {
         comp.m_DCT[j] = DCT_tcoeff[j];
     }
@@ -1252,9 +1318,28 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
 
 	// Create a temp 8x8, i.e. 64 array for the data
 	int data[64] = { 0 };
+	// Retrieve stored DCT value from the t_Coeff
+	for (int i = 0; i < 64; ++i)
+	{
+		switch (currentComponent) {
+		case COMPONENT_Y:
+			data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+			break;
+		case COMPONENT_Cb:
+			data[i] = tCoeff_Cb[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+			break;
+		case COMPONENT_Cr:
+			data[i] = tCoeff_Cr[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+			break;
+		default:
+			data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+			break;
+		} // end switch
+		 
+	}
 
 	// Copy our data into the temp array
-	for (int i = 0; i < 64; ++i)
+	for (int i = zigZagStart; i <= zigZagEnd; ++i)
 	{
 		data[i] = input_dct_coeffs[i];
 	}
@@ -1284,7 +1369,7 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
 }
 #endif
     
-#if DEBUGLEVEL > 5
+#if DEBUGLEVEL > 50
 //    // TODO: remove FANKOOSH
     static int fankoosh = 0;
     if(currentComponent == COMPONENT_Y) {
