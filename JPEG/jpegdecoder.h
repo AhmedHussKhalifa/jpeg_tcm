@@ -182,6 +182,7 @@ public:
 	vector<uint_8> componentID;
 	int counter_progressive = 0;
 	vector<vector <int> > data_DCT;
+	int EOB_run = 0;
 
 	int total_block_Y, total_block_C;
 	int count_block_Y, count_block_Cb, count_block_Cr;
@@ -214,6 +215,7 @@ public:
 	// FOR PROGRESSIVE
 	void decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID);
 
+	void process_huffmann_data_unit_progressive(int currentComponent, int currentX, int currentY);
     void process_huffmann_data_unit(int currentComponent, int currentX, int currentY);
     // Decodes single 8x8 block
     void decode_single_block(int offset, int stride, int currentComponent, uint_8* outputBuf,
@@ -222,6 +224,7 @@ public:
     
     // initializes the necessary positions and buffers for storing the Y component
     void initPositionsBuffersForPictureBuffer();
+	void initCurrentPosition();
     // adds single 8x8 block to the Y picture buffer
     void addBlockSubsampling(int dataBlock[8][8], int currentComponent = COMPONENT_Y);
     

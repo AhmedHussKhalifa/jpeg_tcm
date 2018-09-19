@@ -12,7 +12,7 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
-#define PRINT_HUFFMAN_TABLE              0
+#define PRINT_HUFFMAN_TABLE              1
 #define PRINT_QUANTIZATION_TABLE         0
 #define PRINT_FRAME_HEADER_SOF           1
 #define PRINT_SOS                        1
