@@ -147,6 +147,7 @@ public:
 	bool progressive_Huff_Format = false; // is progressive_Huff_Format
     bool losslessFormat; // is lossless format or lossy
     int zigZagStart, zigZagEnd;
+	uint_8 ssa;
     int approximationH, approximationL;
     int *scanLineCache[ETF_FORMAT_MAX_COMPONENTS];
     
