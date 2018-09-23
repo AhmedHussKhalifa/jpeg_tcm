@@ -14,4 +14,4 @@ Created: September 2018
 - 2018-09-14: First Upload, Sequential Model Done (0xFFC0)
 - 2018-09-17: Progressive: Fifth Scan Done for goose_org.jpeg, Huffman Table overwritten, Dequantiz not done
 - 2018-09-20: Progressive: All Scan Done for goose_org.jpeg, Huffman Table overwritten, Dequantiz not done
-- 2018-09-23: Progressive: ALL Scan done, Data Read properly, but one tcoeff reason to be discovered, Huffman Table overwritten
+- 2018-09-23: Progressive: All Scan done, Data Read properly, but one tcoeff reason unknown, Huffman Table overwritten
