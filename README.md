@@ -10,7 +10,7 @@ Created: September 2018
 - Enviornment: C++
 - IDE: Visual Studio 2017 (Windows), XCode (MAC OS)
 
-### Prerequisites
+### Updates
 - 2018-09-14: First Upload, Sequential Model Done (0xFFC0)
 - 2018-09-17: Progressive: Fifth Scan Done for goose_org.jpeg, Huffman Table overwritten, Dequantiz not done
 - 2018-09-20: Progressive: All Scan Done for goose_org.jpeg, Huffman Table overwritten, Dequantiz not done
