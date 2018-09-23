@@ -164,6 +164,8 @@ public:
     // indices of next block for DCT blocks
     unsigned int currentX_dct[ETF_FORMAT_MAX_COMPONENTS]; // Coordinates for next block
     unsigned int currentY_dct[ETF_FORMAT_MAX_COMPONENTS];
+    unsigned int currentX_dct2[ETF_FORMAT_MAX_COMPONENTS];
+    unsigned int currentY_dct2[ETF_FORMAT_MAX_COMPONENTS];
     int currentBlockHFactor_dct[ETF_FORMAT_MAX_COMPONENTS], currentBlockVFactor_dct[ETF_FORMAT_MAX_COMPONENTS];
 
     
@@ -184,6 +186,7 @@ public:
 	int counter_progressive = 0;
 	vector<vector <int> > data_DCT;
 	int EOB_run = 0;
+	int counter_scan_blockidx = 0;
 
 	int total_block_Y, total_block_C;
 	int count_block_Y, count_block_Cb, count_block_Cr;
