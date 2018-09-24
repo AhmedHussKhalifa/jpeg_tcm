@@ -1,2 +1,82 @@
 ﻿  JPEG.cpp
+  exportpicture.cpp
+  huffmantable.cpp
+  jpegdecoder.cpp
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(658): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(659): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(665): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(678): warning C4102: 'std': unreferenced label
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(885): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1358): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1361): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1364): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1367): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1788): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1791): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1794): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(1797): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2244): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2245): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2255): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2331): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2337): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2360): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2361): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2393): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2394): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2402): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2510): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2516): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2526): warning C4018: '>': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2540): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2541): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2551): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2552): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2560): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2567): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2943): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2944): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2980): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2981): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2992): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(2993): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(3001): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegdecoder.cpp(3002): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+  jpegencoder.cpp
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(25): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(66): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(72): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(141): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(146): warning C4554: '|': check operator precedence for possible error; use parentheses to clarify precedence
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(162): warning C4554: '|': check operator precedence for possible error; use parentheses to clarify precedence
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(222): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(233): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(243): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(253): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(263): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(273): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(283): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(293): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(57): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(153): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(154): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(166): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(167): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(186): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(193): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(410): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(411): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(428): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(429): warning C4018: '<': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(438): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(445): warning C4018: '>=': signed/unsigned mismatch
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(611): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(762): warning C4244: 'argument': conversion from 'double' to 'const char', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(766): warning C4244: 'argument': conversion from 'double' to 'const char', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(770): warning C4244: 'argument': conversion from 'double' to 'const char', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(780): warning C4244: 'argument': conversion from 'double' to 'const char', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(784): warning C4244: 'argument': conversion from 'double' to 'const char', possible loss of data
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(1561): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  Generating Code...
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(333): warning C4715: 'smoothing': not all control paths return a value
   JPEG.vcxproj -> C:\Users\y77jiang\OneDrive - University of Waterloo\5e. TCM-Inception C++\jpeg_tcm\x64\Debug\JPEG.exe
