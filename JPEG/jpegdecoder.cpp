@@ -172,9 +172,8 @@ int jpeg_decoder::parseSeg()
             
             // End of Image (EOI)
         case 0xFFD9:
-			// Convert the Y'CbCr image into RGB
-			ycrcb_to_rgb24_image();
-
+			
+			
 			cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
 			cout << components.size() << endl;
 			
@@ -182,6 +181,8 @@ int jpeg_decoder::parseSeg()
 			if (progressive_Huff_Format) {
 				final_process_progressive();
 			}
+			// Convert the Y'CbCr image into RGB
+			ycrcb_to_rgb24_image();
 
             return JPEG_SEG_EOF;
             

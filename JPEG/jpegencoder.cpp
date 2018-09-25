@@ -65,7 +65,6 @@ jpeg_encoder::jpeg_encoder(jpeg_decoder* processed_jpeg_decoder, std::string out
 	// queue reading stuff
 	m_bits_in = 0;
 
-
 	// Set the number of bytes in the buffer to 0
 	num_bytes_in_jpeg_enc_write_buffer = 0;
 
@@ -108,7 +107,6 @@ void::jpeg_encoder::perform_TCM() {
 		// store output yc:
 		yc_array.at(i) = yc;
 	}
-
 
 	// TODO: remove this: visual output of yc score
 #if DEBUGLEVEL > 20
@@ -854,7 +852,6 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 		perror("JPEG write encoder error");
 	}
 
-
 	//	cout << "Before flushing the number of bytes are " << num_bytes_in_jpeg_enc_write_buffer << endl;
 	//	num_bytes_in_jpeg_enc_write_buffer--;
 	//	flush_jpeg_enc_buffer(file);
@@ -894,7 +891,18 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 #endif
 
 	switch (real_marker) {
-		// SOS marker
+
+		// For progressive we need store a JPEG standard Default Huffman Table
+	case 0xFFC4:
+		if (progressive_Huff_Format) {
+			break;
+		}
+		else {
+			add_byte_to_jpeg_enc_buffer(marker, file);
+			break;
+		}
+
+	// SOS marker
 	case 0xFFDA:
 		return 0; // done
 	default:
@@ -1256,9 +1264,16 @@ void jpeg_encoder::emit_sos(ofstream &file) {
 	for (int i = 0; i < m_num_components; i++) {
 		emit_byte(static_cast<uint_8>(i + 1), file); // component ID
 
-													 // TODO: getters
-		uint_8 tableDC = jpegDecoder->componentTablesDC[i]->tableID;
-		uint_8 tableAC = jpegDecoder->componentTablesAC[i]->tableID;
+		// TODO: getters
+		uint_8 tableDC, tableAC;
+		if (!progressive_Huff_Format) {
+			// Sequential Mode use original picture Huffman Table
+			uint_8 tableDC = jpegDecoder->componentTablesDC[i]->tableID;
+			uint_8 tableAC = jpegDecoder->componentTablesAC[i]->tableID;
+		}
+		else {
+
+		}
 
 		if (i == 0) {
 			emit_byte((tableDC << 4) + tableAC, file); // component huffman table (left part is DC, right part is AC)
@@ -1271,8 +1286,12 @@ void jpeg_encoder::emit_sos(ofstream &file) {
 	}
 
 	// TODO: getters
-	uint_8 zigStart = jpegDecoder->zigZagStart;
-	uint_8 zigEnd = jpegDecoder->zigZagEnd;
+	//uint_8 zigStart = jpegDecoder->zigZagStart;
+	//uint_8 zigEnd = jpegDecoder->zigZagEnd;
+
+	// Even progressive encoded as sequential method
+	uint_8 zigStart = 0;
+	uint_8 zigEnd = 63;
 	uint_8 dummyByte = 0;
 
 	emit_byte(zigStart, file);     /* spectral selection */
@@ -1538,7 +1557,13 @@ void jpeg_encoder::put_bits(uint bits, uint_32 bits_length, ofstream &file) {
 bool jpeg_encoder::savePicture() {
 
 	cout << "\n\n Encode Start " << endl;
+	// Identify whether this is a progressive encoder or not
+	progressive_Huff_Format = jpegDecoder->progressive_Huff_Format;
 
+	if (progressive_Huff_Format) {
+			
+	}
+	
 	// Copy the quantization tables
 	copy_qTables();
 
@@ -1551,8 +1576,6 @@ bool jpeg_encoder::savePicture() {
 	uint_8 ** luminance = jpegDecoder->m_YPicture_buffer;
 	uint_8 ** chrominanceCb = jpegDecoder->m_CbPicture_buffer;
 	uint_8 ** chrominanceCr = jpegDecoder->m_CrPicture_buffer;
-
-
 
 	// NEW to TCM: Apply TCM
 	// perform_TCM();

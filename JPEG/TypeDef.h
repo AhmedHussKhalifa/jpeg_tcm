@@ -20,7 +20,7 @@
 #define DEBUGLEVEL                       12
 
 #define OPEN_CV_ENABLED                  1
-#define DISPLAY_BMP_IMAGE                0
+#define DISPLAY_BMP_IMAGE                1
 
 // Component indices
 #define COMPONENT_Y                      0

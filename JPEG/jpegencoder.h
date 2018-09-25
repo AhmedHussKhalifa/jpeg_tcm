@@ -52,6 +52,12 @@ public:
     jpeg_encoder(jpeg_decoder* input_jpeg_decoder, std::string output_filename);
     bool savePicture();
     
+	// For Progressive
+	bool progressive_Huff_Format = false; // is progressive_Huff_Format
+	HuffmanTable* defaultTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
+	HuffmanTable* defaultTablesAC[ETF_FORMAT_MAX_COMPONENTS];
+	void build_default_huffman_tables();
+
 private:
     
     // Various JPEG enums and tables.
