@@ -7,8 +7,6 @@
 //  Copyright © 2018 All rights reserved.
 //
 
-#include "stdafx.h"
-
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
@@ -26,6 +24,14 @@
 #define COMPONENT_Y                      0
 #define COMPONENT_Cb                     1
 #define COMPONENT_Cr                     2
+
+// Indices for the default huffman table
+#define Y_DC_IDX                            0 
+#define CbCr_DC_IDX                         1
+#define Y_AC_IDX                            2
+#define CbCr_AC_IDX                         3
+
+
 
 // Table length for writing two quantization tables back to back with two DQT markers
 #define DQT_LENGTH_WITH_TWO_MARKERS      67 
@@ -53,15 +59,15 @@
 typedef std::pair<int, unsigned short> huffKey;
 
 // Progressive Encoder - Default Huffman Tables
-static const uint_8 code_length_freq[4][16] = {
+static const unsigned char code_length_freq[4][16] = {
 	{ 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
 	{ 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125 },
 	{ 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119 }
 };
 
-static const uint_8 kDCSyms[12] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-static const uint_8 kACSyms[2][162] = {
+static const unsigned char kDCSyms[12] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+static const unsigned char kACSyms[2][162] = {
 	{ 0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12,
 	0x21, 0x31, 0x41, 0x06, 0x13, 0x51, 0x61, 0x07,
 	0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08,

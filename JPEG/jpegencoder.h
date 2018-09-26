@@ -54,13 +54,13 @@ public:
     
 	// For Progressive
 	bool progressive_Huff_Format = false; // is progressive_Huff_Format
-	vector <HuffmanTable*> huffmanTables;
+	vector <HuffmanTable*> default_huffmanTables;
 	HuffmanTable* defaultTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
 	HuffmanTable* defaultTablesAC[ETF_FORMAT_MAX_COMPONENTS];
-	void build_default_huffman_tables();
 
 private:
     
+
     // Various JPEG enums and tables.
     enum { M_SOF0 = 0xC0, M_DHT = 0xC4, M_SOI = 0xD8, M_EOI = 0xD9, M_SOS = 0xDA, M_DQT = 0xDB, M_APP0 = 0xE0 };
     enum { DC_LUM_CODES = 12, AC_LUM_CODES = 256, DC_CHROMA_CODES = 12, AC_CHROMA_CODES = 256, MAX_HUFF_SYMBOLS = 257, MAX_HUFF_CODESIZE = 32,
@@ -71,7 +71,10 @@ private:
     int count_block_Y, count_block_Cb, count_block_Cr;
 	int total_block, total_block_C;
    
+	// Changes for Progressive
     void copy_qTables();
+	void write_baseline_dct_info(ofstream &file);
+	void build_default_huffman_tables();
 
     // DCT functions:
     void perform_dct(vector<vector<double> > &outBlock, int inBlock[8][8]);
@@ -94,7 +97,7 @@ private:
 
     void writeStartOfFileByteInFile(ofstream &file);
     void writeEOFMarker(ofstream &file);
-    void writeHuffmanTablesFromDecoder(ofstream &file, vector<char>&BITS,vector<int>&valuesDC,vector<char>&BITSA,vector<int>&valuesAC, bool isLuminance);
+	void write_default_huffman_tables (ofstream &file);
 
     // My write methods
     void write_jfif_app0(ofstream &file);

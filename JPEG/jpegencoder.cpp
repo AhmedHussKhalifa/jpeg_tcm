@@ -7,7 +7,6 @@
 //  Copyright © 2018 All rights reserved.
 //
 
-
 #include "stdafx.h"
 #include "jpegencoder.h"
 #include <iostream>
@@ -17,7 +16,7 @@
 
 
 const double pi = 3.1415926535897932384626433832795;
-
+using namespace std;
 
 jpeg_encoder::jpeg_encoder(const std::string filename) : quantization_table_write_process_luminance(true, true), quantization_table_write_process_chrominance(true, false) {
 
@@ -829,6 +828,71 @@ void jpeg_encoder::ZigZagCoding(vector<vector<double> > &block8x8, vector<int>&z
 	}
 } // end Zigzag coding
 
+void jpeg_encoder::write_baseline_dct_info(ofstream &file) {
+
+	/*SOFn: Start of frame marker - Marks the beginning of the frame parameters. The subscript n identifies whether
+	*the encoding process is baseline sequential, extended sequential, progressive, or lossless, as well as which
+	*entropy encoding procedure is used.*/
+	/*For Baseline DCT process, SOFn frame marker is FFC0*/
+	/*Here is general scheme of SOFn block of data*/
+	/*FFC0  Lf  P  Y   X   Nf  [C1 H1 V1 Tq1] [C2 H2 V2 Tq2] ......[Cn Hn Vn Tqn]
+	*Number of bits    16   16  8  16  16  8    8  4  4   8
+	*FFC0 is start of Baseline DCT marker
+	*Lf - frame header length
+	*P - precision
+	*Y - Height
+	*X - Width
+	*Nf - Number of components (For our case is 3 (YCbCr))
+	*C1 - Component ID
+	*H1 - Horisontal sampling factor (usind in chroma subsamping)
+	*V1 - Vertical sampling factor (usind in chroma subsamping)
+	*Tq1- Quantization table ID used for C1 component*/
+
+	emit_marker(M_SOF0, file);
+	
+	// Lf = 17 bytes
+	emit_word(0x11, file);
+
+	// Precision
+	emit_byte(0x08, file);
+	
+	// Y is 16 bits long. I keep height in int variable 
+	// so I need to do some calculations
+	// Height and then width:
+	emit_word((image_to_export_height & 0x0000FFFF), file);
+
+
+
+	// X is 16 bits long. I keep height in int variable 
+	// so I need to do some calculations
+	// Height and then width:
+	emit_word((image_to_export_width & 0x0000FFFF), file);
+	
+	// number of components (Nf)
+	emit_byte(jpegDecoder->components.size(), file);
+	
+
+	for (uint iComponent = 0; iComponent < jpegDecoder->components.size(); ++iComponent) {
+
+		// Emit the component ID
+		emit_byte(1 + iComponent, file);
+
+		// Emit the subsampling
+		int hFactor = jpegDecoder->components[iComponent].HFactor;
+		int vFactor = jpegDecoder->components[iComponent].VFactor;
+		uint_8 subsampling_byte = ((hFactor & 0xF) << 4) 
+								| (vFactor & 0xF);
+		emit_byte(subsampling_byte, file);
+
+		// Emit the quantization table ID
+		QuantizationTable* qTable = jpegDecoder->components[iComponent].componentQuantizationTable;
+		emit_byte(qTable->tableID, file);
+	
+	}
+
+}
+
+
   // copy & paste the header
   // Writes the header part from the original picture until SOS
 
@@ -869,6 +933,13 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 #endif
 	flush_jpeg_enc_buffer(file);
 
+	if (progressive_Huff_Format) {
+		write_baseline_dct_info(file);
+
+		build_default_huffman_tables();
+		write_default_huffman_tables(file);
+	}
+
 #endif
 
 }
@@ -892,15 +963,9 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 
 	switch (real_marker) {
 
-		// For progressive we need store a JPEG standard Default Huffman Table
-	case 0xFFC4:
-		if (progressive_Huff_Format) {
-			break;
-		}
-		else {
-			add_byte_to_jpeg_enc_buffer(marker, file);
-			break;
-		}
+	// For progressive we stop here to deal with it with our default sequential writing
+	case 0xFFC2:
+		return 0;
 
 	// SOS marker
 	case 0xFFDA:
@@ -1080,9 +1145,7 @@ void jpeg_encoder::writeStartOfFileByteInFile(ofstream &file) {
 
 
 // Write huffman tables from the decoder:
-void jpeg_encoder::writeHuffmanTablesFromDecoder(ofstream &file, vector<char>&BITS, vector<int>&valuesDC, vector<char>&BITSA, vector<int>&valuesAC, bool isLuminance) {
-
-
+void jpeg_encoder::write_default_huffman_tables(ofstream &file) {
 	// First, calculate the table length (Lh)
 	uint_16 table_length = 0;
 
@@ -1095,9 +1158,9 @@ void jpeg_encoder::writeHuffmanTablesFromDecoder(ofstream &file, vector<char>&BI
 	uint_8  huffmanTableOptions = 0; // I will decompose this in two nibbles
 
 									 // Read components and their huffman tables
-	for (int i = 0; i < jpegDecoder->huffmanTables.size(); ++i) {
+	for (int i = 0; i < default_huffmanTables.size(); ++i) {
 
-		const HuffmanTable* hTable = jpegDecoder->huffmanTables.at(i);
+		const HuffmanTable* hTable = default_huffmanTables.at(i);
 
 		// Emit the DHT marker
 		emit_marker(M_DHT, file);
@@ -1128,7 +1191,6 @@ void jpeg_encoder::writeHuffmanTablesFromDecoder(ofstream &file, vector<char>&BI
 			uint_8 element = iter_new->second;
 			emit_byte(element, file);
 		}
-
 	}
 }
 
@@ -1268,11 +1330,19 @@ void jpeg_encoder::emit_sos(ofstream &file) {
 		uint_8 tableDC, tableAC;
 		if (!progressive_Huff_Format) {
 			// Sequential Mode use original picture Huffman Table
-			uint_8 tableDC = jpegDecoder->componentTablesDC[i]->tableID;
-			uint_8 tableAC = jpegDecoder->componentTablesAC[i]->tableID;
+			tableDC = jpegDecoder->componentTablesDC[i]->tableID;
+			tableAC = jpegDecoder->componentTablesAC[i]->tableID;
 		}
 		else {
-
+			// Sequential Mode use original picture Huffman Table
+			if (i == COMPONENT_Y) {
+				tableDC = default_huffmanTables.at(Y_DC_IDX)->tableID;
+				tableAC = default_huffmanTables.at(Y_AC_IDX)->tableID;
+			}
+			else {
+				tableDC = default_huffmanTables.at(CbCr_DC_IDX)->tableID;
+				tableAC = default_huffmanTables.at(CbCr_AC_IDX)->tableID;
+			}		
 		}
 
 		if (i == 0) {
@@ -1427,8 +1497,18 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
 	// 1. Write the code for the DC delta from Huffman DC table of current component with the its corresponding codeLength
 	// (table->code[bit_count(dc_delta)], table->codeLength[bit_count(dc_delta)]
 	// 2. Write the signed int bits for the dc_delta itself write(dc_delta, nbits)
-
-	HuffmanTable* dc_hTable = jpegDecoder->componentTablesDC[currentComponent];
+	HuffmanTable* dc_hTable;
+	if (!progressive_Huff_Format) {
+		dc_hTable = jpegDecoder->componentTablesDC[currentComponent];
+	}
+	else {
+		if (currentComponent == COMPONENT_Y) {
+			dc_hTable = default_huffmanTables.at(Y_DC_IDX);
+		}
+		else {
+			dc_hTable = default_huffmanTables.at(CbCr_DC_IDX);
+		}
+	}
 
 	const uint nbits = bit_count(dc_delta);
 	// put_bits:
@@ -1449,7 +1529,18 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
 	// ----------
 
 	// Encode AC coefficients:
-	HuffmanTable* ac_hTable = jpegDecoder->componentTablesAC[currentComponent];
+	HuffmanTable* ac_hTable;
+	if (!progressive_Huff_Format) {
+		ac_hTable = jpegDecoder->componentTablesAC[currentComponent];
+	}
+	else {
+		if (currentComponent == COMPONENT_Y) {
+			ac_hTable = default_huffmanTables.at(Y_AC_IDX);
+		}
+		else {
+			ac_hTable = default_huffmanTables.at(CbCr_AC_IDX);
+		}
+	}
 
 	int run_len = 0;
 
@@ -1564,14 +1655,14 @@ void jpeg_encoder::build_default_huffman_tables() {
 			else table->tableClass = 1; // tableClass 0 is for DC
 			table->tableID = 0;
 			table->tableSegmentLengthFromBitstream = 0x43;
-			huffmanTables.push_back(table);
+			default_huffmanTables.push_back(table);
 		}
 		else { // AC condition, either Y or C
 			if (huffman_table_counter == 2) table->tableClass = 0;
 			else table->tableClass = 1; // tableClass 1 is for AC
 			table->tableID = 1;
 			table->tableSegmentLengthFromBitstream = 0x43;
-			huffmanTables.push_back(table);
+			default_huffmanTables.push_back(table);
 		}
 
 		// DC total 12 categories in default table
@@ -1660,6 +1751,8 @@ bool jpeg_encoder::savePicture() {
 
 	// copy & paste header directly
 	writeHeaderFromOriginalPicture(output);
+
+	// exit(0);
 
 	// SOS:
 	emit_sos(output);
