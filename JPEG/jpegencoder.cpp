@@ -1462,7 +1462,7 @@ void jpeg_encoder::encode_mcu(vector<int> luminanceZigZagArray, vector<int> chro
 
 void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int CurrentY, int currentComponent, int count_block, ofstream &file) {
 
-	// DC coding
+// DC coding
 #if DEBUGLEVEL > 20
 	if (currentComponent == COMPONENT_Y)
 		cout << "Encode block at X: " << CurrentX << ", Y: " << CurrentY << endl;
