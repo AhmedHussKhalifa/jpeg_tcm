@@ -1554,6 +1554,62 @@ void jpeg_encoder::put_bits(uint bits, uint_32 bits_length, ofstream &file) {
 	} // end while
 }
 
+void jpeg_encoder::build_default_huffman_tables() {
+	for (int huffman_table_counter = 0; huffman_table_counter < 4; ++huffman_table_counter) { // Totally 4 tables
+		HuffmanTable* table = 0; // initialize a Huffman table to process
+		table = new HuffmanTable();
+		if (huffman_table_counter < 2) { // DC condition, either Y or C
+			// initialization
+			if (huffman_table_counter == 0) table->tableClass = 0;
+			else table->tableClass = 1; // tableClass 0 is for DC
+			table->tableID = 0;
+			table->tableSegmentLengthFromBitstream = 0x43;
+			huffmanTables.push_back(table);
+		}
+		else { // AC condition, either Y or C
+			if (huffman_table_counter == 2) table->tableClass = 0;
+			else table->tableClass = 1; // tableClass 1 is for AC
+			table->tableID = 1;
+			table->tableSegmentLengthFromBitstream = 0x43;
+			huffmanTables.push_back(table);
+		}
+
+		// DC total 12 categories in default table
+		int category = 0;
+		for (int i = 0; i < 16; ++i) {
+			table->number_of_codes_for_each_1to16[i] = code_length_freq[huffman_table_counter][i];
+		}
+
+		uint_32 code = 0; // Huffman code which will be connected with element
+		uint_8 element = 0; // Read element from file
+		int counter_coeff = 0;
+		// Remaining bytes are the data values to be mapped
+		// Build the Huffman map of (length, code) -> value
+		for (int i = 0; i < 16; ++i)
+		{
+			for (int j = 0; j < code_length_freq[huffman_table_counter][i]; ++j)
+			{
+				// element is the actual unique element in the alphabet
+				if(huffman_table_counter == 0 || huffman_table_counter == 1) element = kDCSyms[counter_coeff++]; // DC's
+				else if (huffman_table_counter == 3) element = kACSyms[0][counter_coeff++]; // Y-AC
+				else element = kACSyms[1][counter_coeff++]; // C-AC
+
+				table->codes[element] = code;
+				table->codeLengths[element] = i + 1; // the length is at least 1 and at most 16
+														// so far used for printing purposes
+														// <Length, code> = element
+				table->huffData[huffKey(i + 1, code)] = element;
+				code++; //Elements on the same tree depth have code incremented by one
+			}// end j
+
+			// multiply by 2 for next iteration // shift
+			code <<= 1; 
+		} // end i
+	} //end huffman_table_counter
+	
+
+}
+
 bool jpeg_encoder::savePicture() {
 
 	cout << "\n\n Encode Start " << endl;

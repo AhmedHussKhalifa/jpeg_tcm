@@ -54,6 +54,7 @@ public:
     
 	// For Progressive
 	bool progressive_Huff_Format = false; // is progressive_Huff_Format
+	vector <HuffmanTable*> huffmanTables;
 	HuffmanTable* defaultTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
 	HuffmanTable* defaultTablesAC[ETF_FORMAT_MAX_COMPONENTS];
 	void build_default_huffman_tables();
