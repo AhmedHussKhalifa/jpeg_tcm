@@ -6,9 +6,6 @@
 //  Author: Hossam Amer & Yanbing Jiang, University of Waterloo
 //  Copyright © 2018 All rights reserved.
 //
-#if IS_RUN_MS_WINDOWS
-#include "stdafx.h"
-#endif
 
 #include "jpegdecoder.h"
 #include "TypeDef.h"
@@ -19,7 +16,7 @@
 const double pi=3.1415926535897932384626433832795;
 using namespace std;
 
-jpeg_decoder::jpeg_decoder(std::string filename) : zigZagStart(0), zigZagEnd(63), losslessFormat(false) { 
+jpeg_decoder::jpeg_decoder(std::string filename) : zigZagStart(0), zigZagEnd(63), losslessFormat(false) {
     // Debug messages used by parseSeg to tell us which segment we're at
     segNames[0x00] = std::string("Baseline DCT; Huffman");
     segNames[0x01] = std::string("Extended sequential DCT; Huffman");
@@ -94,12 +91,12 @@ jpeg_decoder::jpeg_decoder(std::string filename) : zigZagStart(0), zigZagEnd(63)
     
     // initialize the m_Y and m_Cb and m_Cr pointers temp space to NULL
     m_Y = m_Cb = m_Cr = NULL;
-
+    
     // init the Y, Cb, Cr picture buffer into null:
     m_YPicture_buffer = m_CbPicture_buffer = m_CrPicture_buffer = NULL;
     
     // init the coefficients buffer into null:
-	 count_block_Y = count_block_Cb = count_block_Cr = 0;
+    count_block_Y = count_block_Cb = count_block_Cr = 0;
     readFile();
     
 }
@@ -133,9 +130,9 @@ void jpeg_decoder::readFile()
     }
     else {
         perror("JPEG parse error");
-		printf("Will pause for you to press Enter and exiting afterwards \n");
-		getchar();
-		exit(0);
+        printf("Will pause for you to press Enter and exiting afterwards \n");
+        getchar();
+        exit(0);
     }
     
     
@@ -159,12 +156,12 @@ int jpeg_decoder::parseSeg()
         printf("Segment ID expected, not found.\n");
         return JPEG_SEG_ERR;
     }
-
+    
     printf(
            "Found segment at file position %d: %s 0x%4x\n",
            fpos, segNames[id-0xFFC0].c_str(), id);
     
-    switch (id) {    
+    switch (id) {
             // Application specific segement will be ignored (not useful for our purpose)
             // The SOI and EOI segments are the only ones not to have
             // a length, and are always a fixed two bytes long; do
@@ -175,6 +172,18 @@ int jpeg_decoder::parseSeg()
             
             // End of Image (EOI)
         case 0xFFD9:
+            
+            
+            cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
+            cout << components.size() << endl;
+            
+            // Progressive processing need after storing tcoeff: Dequantization, Inverse Zigzag, IDCT & Add block subsampling
+            if (progressive_Huff_Format) {
+                final_process_progressive();
+            }
+            // Convert the Y'CbCr image into RGB
+            ycrcb_to_rgb24_image();
+            
             return JPEG_SEG_EOF;
             
             // The DHT segment defines a Huffman table. The handler should
@@ -197,8 +206,8 @@ int jpeg_decoder::parseSeg()
             }
             break;
             
-		case 0xFFC2: // SOF2 = Progressive DCT; Huffman  
-			progressive_Huff_Format = true;
+        case 0xFFC2: // SOF2 = Progressive DCT; Huffman
+            progressive_Huff_Format = true;
         case 0xFFC0: // SOF0 = Start of frame (Baseline DCT --
             // if you want to add more (lossless..etc), you need to send the maker, and probe other types
             
@@ -207,6 +216,9 @@ int jpeg_decoder::parseSeg()
                 cout<< "Unexpected end of SOF segment" << endl;
                 return JPEG_SEG_ERR;
             }
+            // Initialize the necessary positions and buffers for storing the Y, Cb, Cr components:
+            // if(!progressive_Huff_Format || counter_progressive == 0)
+            initPositionsBuffersForPictureBuffer();
             break;
             
         case 0xFFDD: // DRI = Define Restart Interval
@@ -225,7 +237,7 @@ int jpeg_decoder::parseSeg()
             // length of the bitstream; for now, assume it's the rest
             // of the file less the two-byte EOI segment
         case 0xFFDA: // SOS = Start Of Scan
-            
+            // cout << ftell(fp) << endl;
             size = READ_WORD();
             if (readScanHeader(size) != size) {
                 cout<< "Unexpected end of SOS segment" << endl;
@@ -234,16 +246,11 @@ int jpeg_decoder::parseSeg()
             
             // Scan starts immediately after header
             // Try a new approach
-			if (progressive_Huff_Format) {
-				readImageEntryPoint(); //readProgressiveImageEntryPoint(); 
-				counter_progressive++;
-			}
-			else {
-				readImageEntryPoint();
-			}
-			
+            // Include both sequential and progressive
+            readImageEntryPoint();
+            //counter for counting the number of scans (i.e. number of 0xFFDA)
+            if (progressive_Huff_Format) counter_progressive++;
             break;
-            
             // Any other segment has a length specified at its start,
             // so skip over that many bytes of file
             
@@ -294,16 +301,16 @@ uint_16 jpeg_decoder::readHuffmanTables(uint_16 tableLengthFromBitStream)
         }
         cout << "Table Length: " << std::dec << tableLengthFromBitStream << endl;
 #endif
-
+        
         // Looking for tableID in tables
         HuffmanTable* table = 0;
-        for (uint i = 0; i< huffmanTables.size(); i++) {
-            HuffmanTable* t = huffmanTables[i];
-            if (t->tableID == tableID && t->tableClass == tableClass) {
-                table = huffmanTables[i];
-                break;
-            }
-        }
+        /*for (uint i = 0; i< huffmanTables.size(); i++) {
+         HuffmanTable* t = huffmanTables[i];
+         if (t->tableID == tableID && t->tableClass == tableClass) {
+         table = huffmanTables[i];
+         break;
+         }
+         }*/
         
         // Not found, create a new table
         if (table == 0) {
@@ -362,7 +369,7 @@ uint_16 jpeg_decoder::readHuffmanTables(uint_16 tableLengthFromBitStream)
 #endif
         
     } // end while loop
-
+    
     // Compare the length of the table with bytes read minus the table length bytes (=2)
     return bytes_read-2;
 } // end readHuffmanTables
@@ -381,7 +388,7 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
     uint_8  tableIdentifier = 0; // Specifies is it DC element or AC element of table. 0-DC element 1-AC element
     uint_8  sizeOfElements = 0; // I will decompose this in two nibbles
     int tableData[64]; // 64 elements per table
- 
+    
     // counter of how many bytes have been read (2 bytes are read for the length of huffman table)
     int bytes_read = 2;
     
@@ -393,7 +400,7 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
         
         QuantizationTable qTable(false, false);
         qTable.tableID = tableIdentifier;
-		qTable.tableLength = tableLengthFromBitStream;
+        qTable.tableLength = tableLengthFromBitStream;
         
         
 #if PRINT_QUANTIZATION_TABLE
@@ -412,8 +419,8 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
             
 #if PRINT_QUANTIZATION_TABLE
             cout << "Precision: 8 bits" << endl;
-#endif   
-            for (int i = 0; i < 64; ++i) {        
+#endif
+            for (int i = 0; i < 64; ++i) {
                 tableData[i] = fgetc(fp); // Read a byte
             }
             
@@ -468,7 +475,7 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
 } // end readQuantizationTables()
 
 
-void jpeg_decoder::inverseZigZagCoding(int *array, int (*matrix)[8]) {  
+void jpeg_decoder::inverseZigZagCoding(int *array, int (*matrix)[8]) {
     int x_indices[64] = {0, 1, 0, 0, 1, 2, 3, 2,
         1, 0, 0, 1, 2, 3, 4, 5,
         4, 3, 2, 1, 0, 0, 1, 2,
@@ -494,7 +501,7 @@ void jpeg_decoder::inverseZigZagCoding(int *array, int (*matrix)[8]) {
     
 } // end inverseZigZagCoding
 
-void jpeg_decoder::inverseZigZagScanning(int out_matrix[8][8], const int input_matrix[8][8]) { 
+void jpeg_decoder::inverseZigZagScanning(int out_matrix[8][8], const int input_matrix[8][8]) {
 #if DEBUGLEVEL > 12
     cout << "Block:--------------" << endl;
     for(int i = 0; i < 8; ++i){
@@ -548,7 +555,7 @@ void jpeg_decoder::inverseZigZagScanning(int out_matrix[8][8], const int input_m
         }
         cout << "\n";
     }
-#endif 
+#endif
 } // end inverse zig zag scanning
 
 
@@ -635,28 +642,28 @@ uint_16 jpeg_decoder::readFrameHeader(uint_16 headerLengthFromBitStream)
     // Set the picture parameters
     jpegImageWidth = pictureWidth;
     jpegImageHeight = pictureHeight;
-	jpegImageSamplePrecision = sample_precision;
-
-	
-	// set the mcu width and heights:
-	mcu_width  = 8 * maxHFactor;
-	mcu_height = 8 * maxVFactor;
-
+    jpegImageSamplePrecision = sample_precision;
+    
+    
+    // set the mcu width and heights:
+    mcu_width  = 8 * maxHFactor;
+    mcu_height = 8 * maxVFactor;
+    
     //set the mcu cols and rows
     mcu_rows = (jpegImageHeight + mcu_height - 1) / mcu_height ;
     mcu_cols = (jpegImageWidth  + mcu_width - 1) / mcu_width ;
-
-	// Calculate the upscaled width and height to be N multiples of the MCU size:
-
-	// Upscaled width and height
-	upscale_width =  ceil(1.0* jpegImageWidth / mcu_width) * mcu_width;
-	upscale_height = ceil(1.0* jpegImageHeight / mcu_height) * mcu_height;
-
-
-	
-	// TODO: unsed remove this
-	total_block_Y = upscale_height * upscale_width / 64;
-	total_block_C = ceil(1.0 * total_block_Y / (components.at(COMPONENT_Y).VFactor));
+    
+    // Calculate the upscaled width and height to be N multiples of the MCU size:
+    
+    // Upscaled width and height
+    upscale_width =  ceil(1.0* jpegImageWidth / mcu_width) * mcu_width;
+    upscale_height = ceil(1.0* jpegImageHeight / mcu_height) * mcu_height;
+    
+    
+    
+    // TODO: unsed remove this
+    total_block_Y = upscale_height * upscale_width / 64;
+    total_block_C = ceil(1.0 * total_block_Y / (components.at(COMPONENT_Y).VFactor));
     
 #if PRINT_FRAME_HEADER_SOF
     // Header Length
@@ -681,9 +688,9 @@ uint_16 jpeg_decoder::readFrameHeader(uint_16 headerLengthFromBitStream)
             case COMPONENT_Cr:
                 component_type = " (Chrom: Cr)";
                 break;
-        }    
-        cout << "Component(#" << i << "): ID = " << components.at(i).componentID << component_type << ", SubSamp " 
-			 << components.at(i).HScale << "*" << components.at(i).VScale << ", Sel QT ID = " << components.at(i).componentQTableID << endl ;      
+        }
+        cout << "Component(#" << i << "): ID = " << components.at(i).componentID << component_type << ", SubSamp "
+        << components.at(i).HScale << "*" << components.at(i).VScale << ", Sel QT ID = " << components.at(i).componentQTableID << endl ;
     }
     
 #endif
@@ -712,7 +719,7 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     int bytes_read = 2; // 2 bytes for the length
     
     // number of components //Ns in standard
-	numberOfComponents = fgetc(fp);
+    numberOfComponents = fgetc(fp);
     
     // Increment bytes_read
     bytes_read += 3;
@@ -722,12 +729,12 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
         return JPEG_SEG_ERR;
     }
     
-	// For progressive: potential 1 component per scan...
+    // For progressive: potential 1 component per scan...
     /*if (numberOfComponents != this->components.size()) {
-        cout << "Number of components in SOS header is" << numberOfComponents << ", but in SOF header is " << this->components.size();
-        cout << " -- We will trust SOF header, but this probably wont work :(" << endl;
-        numberOfComponents = this->components.size();
-    }*/
+     cout << "Number of components in SOS header is" << numberOfComponents << ", but in SOF header is " << this->components.size();
+     cout << " -- We will trust SOF header, but this probably wont work :(" << endl;
+     numberOfComponents = this->components.size();
+     }*/
     
     if (numberOfComponents > ETF_FORMAT_MAX_COMPONENTS) {
         cout << "Specified " << numberOfComponents << " components, maximum is " << ETF_FORMAT_MAX_COMPONENTS;
@@ -737,51 +744,52 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     
     // Read components and their huffman tables
     for (int i = 0; i < numberOfComponents; ++i) {
-        componentID.push_back(fgetc(fp));
+        uint_8 currentID = fgetc(fp);
+        componentID.push_back(currentID);
         uint_8 tableID = fgetc(fp);
         
         // Increment bytes_read
         bytes_read +=2;
         
         // Check component in components list
-		if (!progressive_Huff_Format) {
-			if (this->components.at(i).componentID != componentID[i]) {
-				cout << "Component ID in SOS header is " << componentID[i] << ", but in SOF header is " << this->components[i].componentID;
-				cout << " -- We will trust SOF header" << endl;
-			}
-		}
+        if (!progressive_Huff_Format) {
+            if (this->components.at(i).componentID != componentID[i]) {
+                cout << "Component ID in SOS header is " << componentID[i] << ", but in SOF header is " << this->components[i].componentID;
+                cout << " -- We will trust SOF header" << endl;
+            }
+        }
         
         
         // Find AC and DC Huffman table in tables list
         uint_8 tableDC = tableID >> 4; // left most part
         uint_8 tableAC = tableID & 0x0F; // right most part
-        componentTablesDC[i] = componentTablesAC[i] = 0;
+        componentTablesDC[currentID - 1] = componentTablesAC[currentID - 1] = 0;
         
         // Find component huffman table
         for(int j = 0; j < huffmanTables.size(); ++j){
             HuffmanTable* tempHuffmanTable = huffmanTables[j];
             
             if(tempHuffmanTable->tableID == tableDC && !tempHuffmanTable->tableClass){
-                componentTablesDC[i] = tempHuffmanTable;
+                componentTablesDC[currentID - 1] = tempHuffmanTable;
             }
             
             if(tempHuffmanTable->tableID == tableAC && tempHuffmanTable->tableClass){
-                componentTablesAC[i] = tempHuffmanTable;
+                componentTablesAC[currentID - 1] = tempHuffmanTable;
             }
         }
         
         // DC Huffman tables not found
-        if (componentTablesDC[i] == 0) {
+        if (componentTablesDC[currentID - 1] == 0) {
             // Get first usable table
             for (uint j = 0; j < huffmanTables.size(); ++j) {
                 HuffmanTable* t = huffmanTables[j];
                 if (t->tableClass == 0) {
-                    componentTablesDC[i] = t;
+                    componentTablesDC[currentID - 1] = t;
                     break;
                 }
             }
             
-            if (componentTablesDC[i] == 0) {
+            if (componentTablesDC[currentID - 1] == 0) {
                 cout << "File contains no DC Huffman tables!" << endl;
                 return JPEG_SEG_ERR;
             }
@@ -789,21 +797,21 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
         } // DC not found
         
         // AC Huffman tables not found
-        if (componentTablesAC[i] == 0) {
+        if (componentTablesAC[currentID - 1] == 0) {
             // Get first usable table
             for (uint j = 0; j < huffmanTables.size(); ++j) {
                 HuffmanTable* t = huffmanTables[j];
                 if (t->tableClass == 1) {
-                    componentTablesAC[i] = t;
+                    componentTablesAC[currentID - 1] = t;
                     break;
                 }
             }
-            if (componentTablesAC[i] == 0) {
+            if (componentTablesAC[currentID - 1] == 0) {
                 // cout << "File contains no AC Huffman tables!" << endl; // Can happen in progressive JPEG!
-                componentTablesAC[i] = componentTablesDC[i];
+                componentTablesAC[currentID - 1] = componentTablesDC[currentID - 1];
             }
             
-            cout << "SOS header specifies inexistant Huffman table " << tableAC << " - using " << componentTablesAC[i]->tableID << endl;
+            //cout << "SOS header specifies inexistant Huffman table " << tableAC << " - using " << componentTablesAC[i]->tableID << endl;
         } // AC not found
         
     } // end loop on components
@@ -812,13 +820,17 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     // Start and end point for zig-zag coding
     zigZagStart = fgetc(fp); // Ss in standard
     zigZagEnd   = fgetc(fp); // Se in standard
-	//cout << zigZagStart << "  " << zigZagEnd << endl;
+    
+    //FOR PROGRESSIVE
+    if (zigZagStart > 1) {
+        EOB_run = 0;
+    }
+    //cout << zigZagStart << "  " << zigZagEnd << endl;
     // Increment bytes_read
     bytes_read += 2;
     
     // TODO: Bit approximation for progressive JPEG
     //unsigned char dummy;
-    uint_8 ssa; 
     ssa = fgetc(fp);
     approximationH = ssa >> 4;    // Ah in standard
     approximationL = ssa & 0x0F;  // Al in standard
@@ -829,12 +841,12 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     cout << "============= MARKER: SOS" << endl;
     cout << "Header Length: " << headerLength << endl;
     cout << "Zigzag start: " << static_cast<int>(zigZagStart) << ", ZigZag End: " << static_cast<int>(zigZagEnd) << endl;
-	cout << "Successive approximation bit position HIGH: " << static_cast<int>(approximationH) << ", Successive approximation LOW: " << static_cast<int>(approximationL) << endl;
+    cout << "Successive approximation bit position HIGH: " << static_cast<int>(approximationH) << ", Successive approximation LOW: " << static_cast<int>(approximationL) << endl;
     printf("Number of components in scan: %d\n", numberOfComponents);
     
     for(int i = 0; i < numberOfComponents; ++i){
         printf("Component[%d]: selector = %d, table = %d (DC), %d (AC) \n", i, components.at(i).componentID,
-               componentTablesDC[i]->tableID, componentTablesAC[i]->tableID);
+               componentTablesDC[componentID[i] - 1]->tableID, componentTablesAC[componentID[i] - 1]->tableID);
     }
     
 #endif
@@ -932,30 +944,34 @@ void jpeg_decoder::readImageEntryPoint() {
     int block_number = 0;
 #endif
     
-    // Initialize the necessary positions and buffers for storing the Y, Cb, Cr components:
-    initPositionsBuffersForPictureBuffer();
-    
     // TODO: Support for images that are not multiples of 8x8, 420 (needs more work)
     //    int lim_x = ceil(1.0*jpegImageWidth/xstride_by_mcu);
     //    int lim_y = ceil(1.0*jpegImageHeight/ystride_by_mcu);
     //    for (int y = 0 ; y < lim_y; ++y) for (int x = 0; x < lim_x; ++x)
     
     // Just the decode the image by 'macroblock' (size is 8x8, 8x16, or 16x16)
+    g_nbits_in_reservoir = 0;
+    g_reservoir = 0;
+    initCurrentPosition();
+    
     for (int y = 0 ; y < jpegImageHeight; y+=ystride_by_mcu){
         for (int x = 0; x < jpegImageWidth; x+=xstride_by_mcu){
+            //EOB_run = 0;
             // Decode the MCU plane
-			if (!progressive_Huff_Format) decode_mcu(hFactor, vFactor, x, y);
-			else decode_mcu_progressive(hFactor, vFactor, x, y, componentID);
-			// cout << x << "---" << y << endl;
+            if (!progressive_Huff_Format) {
+                decode_mcu(hFactor, vFactor, x, y);
+            }
+            else {
+                decode_mcu_progressive(hFactor, vFactor, x, y, componentID);
+            }
+            // cout << x << "---" << y << endl;
 #if PRINT_BLOCK_PROGRESS
             cout << "Block " << (block_number++) << " is done!"  << endl;
-#endif   
+#endif
         } // end inner
     }// end outer
-
-    // Convert the Y'CbCr image into RGB
-    ycrcb_to_rgb24_image();
-      
+    componentID.clear(); // Clear the ID vector for next use
+    
 #if DEBUGLEVEL > 50
     cout << "RGB Picture just before conversion: " << endl;
     int Height = jpegImageHeight;
@@ -980,7 +996,7 @@ void jpeg_decoder::readImageEntryPoint() {
         }
     }
 #endif
-
+    
 } // end readImageEntryPoint
 
 
@@ -991,44 +1007,46 @@ void jpeg_decoder::readImageEntryPoint() {
 //  | 3 | 4 |
 //  '-------'
 
+// Progressive Mode's Decode MCU
+// Each scan may contain different component to scan, than need a buffer componentID to identify which component is scanned during current scan
 void jpeg_decoder::decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID) {
-
-	for (int m = 0; m < componentID.size(); ++m) {
-		if (componentID[m] == 1) {
-			for (int y = 0; y < componentHeight; ++y)
-			{
-				for (int x = 0; x < componentWidth; ++x)
-				{
-					int stride = componentHeight * 8;
-					int offset = x * 8 + y * 64 * componentWidth;
-					// Y component: (a data unit for huffman is an 8x8 block)
-					process_huffmann_data_unit(COMPONENT_Y, currentX, currentY);
-					decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
-					count_block_Y++;
-				} // end inner loop
-			} // end outer loop
-		}
-		else if (componentID[m] == 2) {
-			int stride = 8;
-			int offset = 0;
-
-			// Cb 
-			process_huffmann_data_unit(COMPONENT_Cb, currentX, currentY);
-			decode_single_block(offset, stride, COMPONENT_Cb, m_Cb, currentX, currentY);
-		}
-		else {
-			int stride = 8;
-			int offset = 0;
-
-			// Cr:
-			process_huffmann_data_unit(COMPONENT_Cr, currentX, currentY);
-			decode_single_block(offset, stride, COMPONENT_Cr, m_Cr, currentX, currentY);
-		}
-	}
-	componentID.clear(); // Clear the ID vector for next use
+    for (int m = 0; m < componentID.size(); ++m) {
+        counter_scan_blockidx = 0;
+        // Y component
+        if (componentID[m] == 1) {
+            for (int y = 0; y < componentHeight; ++y)
+            {
+                for (int x = 0; x < componentWidth; ++x)
+                {
+                    int stride = componentHeight * 8;
+                    int offset = x * 8 + y * 64 * componentWidth;
+                    // Y component: (a data unit for huffman is an 8x8 block)
+                    // huffman table process in progressive mode
+                    process_huffmann_data_unit_progressive(COMPONENT_Y, currentX, currentY);
+                    decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
+                    counter_scan_blockidx++;
+                } // end inner loop
+            } // end outer loop
+        }
+        else if (componentID[m] == 2) {
+            int stride = 8;
+            int offset = 0;
+            // Huffman table process in progressive mode
+            process_huffmann_data_unit_progressive(COMPONENT_Cb, currentX, currentY);
+            decode_single_block(offset, stride, COMPONENT_Cb, m_Cb, currentX, currentY);
+        }
+        else {// Cr component
+            int stride = 8;
+            int offset = 0;
+            // Huffman table process in progressive mode
+            process_huffmann_data_unit_progressive(COMPONENT_Cr, currentX, currentY);
+            decode_single_block(offset, stride, COMPONENT_Cr, m_Cr, currentX, currentY);
+        }
+    }
 } // end decode_mcu_progressive
 //---------------------------------------------------------------------------------------------------
 
+// Sequential Mode's Decode MCU
 void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int currentX, int currentY) {
     for (int y = 0; y < componentHeight; ++y )
     {
@@ -1039,17 +1057,15 @@ void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int curren
             
             // Y component: (a data unit for huffman is an 8x8 block)
             process_huffmann_data_unit(COMPONENT_Y, currentX, currentY);
-			decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
-			count_block_Y++;
+            decode_single_block(offset, stride, COMPONENT_Y, &(m_Y[offset]), currentX, currentY);
+            count_block_Y++;
             
         } // end inner loop
     } // end outer loop
     
-
     // The rest of the components if they exist:
-	for (int iComponent = 1; iComponent < numberOfComponents; ++iComponent) //components.size()
+    for (int iComponent = 1; iComponent < numberOfComponents; ++iComponent) //components.size()
     {
-		
         int stride = 8;
         int offset = 0;
         
@@ -1065,23 +1081,479 @@ void jpeg_decoder::decode_mcu(int componentWidth, int componentHeight,int curren
         else {
             cout << "-|- ##ERROR## We only support three color components (Y'CbCr)." << endl;
         }
-
-		count_block_Cb++;
-		count_block_Cr++;
+        
+        count_block_Cb++;
+        count_block_Cr++;
         
     }
-    
-    
 } // end decode_mcu
 
-// Start huffman decoding
-void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int currentX, int currentY) {
+// Process Huffman Data in Progressive Mode
+void jpeg_decoder::process_huffmann_data_unit_progressive(int currentComponent , int currentX, int currentY) {
     
     // We memset it here, as later on we can just skip along, when we have lots
     // of leading zeros, for our AC run length encoding :)
     short DCT_tcoeff[64];
     memset(DCT_tcoeff, 0, sizeof(DCT_tcoeff)); //Initialize DCT_tcoeff
     
+    // How many AC elements should we read?
+    int ACcount;
+    if (zigZagStart != 0) ACcount = zigZagEnd - zigZagStart + 1;
+    else ACcount = 0;
+    
+    // found in huffman table
+    bool found = false;
+    
+    // decodedValue from huffmanTable
+    int decodedValue = 0;
+    
+    // DC/AC Refine
+    bool progressive_DC_refine = false;
+    bool progressive_AC_refine = false;
+    
+#if DEBUGLEVEL > 40
+    printDCHuffmanCodes(currentComponent);
+    printACHuffmanCodes(currentComponent);
+#endif
+    
+    // DC Scans
+    if (zigZagStart == 0) {
+        if (approximationH != 0) progressive_DC_refine = true;
+        if (!progressive_DC_refine) { // DC First Scans
+            //    According to G.2 "In order to avoid repetition, detail flow diagrams
+            //    of progressive decoder operation are not included. Decoder operation is
+            //    defined by reversing the function of each stop described in the encoder
+            //    flow charts, and performing the steps in reverse order."
+            for (int codeLength = 1; codeLength <= 16; ++codeLength)
+            {
+                // Keep grabbing one bit at a time till we find one thats a huffman code
+                int code = LookNBits(codeLength);
+                // found in huffman table
+                found = false;
+                
+                // Check if its one of our huffman codes
+                // Current Huffman table (Initially DC)
+                // We decode the first DC coeffient that same way as in a sequential
+                // scan except for the point transform according to G.1.2.1
+                if (is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue)) {
+                    // you looked ahead, skip those bits
+                    SkipNBits(codeLength);
+                    // set the found in huffman table to true
+                    found = true;
+                    // The decoded value is the number of bits we have to read in next
+                    int numDataBits = decodedValue;
+                    
+#if DEBUGLEVEL > 50
+                    cout << "The decoded value is the number of bits we have to read in next equals to " << numDataBits << endl;
+#endif
+                    // We know the next k bits are for the actual data
+                    if (numDataBits == 0)
+                    {
+                        DCT_tcoeff[0] = previousDC[currentComponent];
+                        
+#if DEBUGLEVEL > 50
+                        cout << "First DC coefficient is " << DCT_tcoeff[0] << endl;
+#endif
+                    }
+                    else{
+                        // residual DC:
+                        short residualDC = GetNBits(numDataBits);
+#if DEBUGLEVEL > 50
+                        cout << "Delta of DC coefficient " << residualDC << endl;
+#endif
+                        residualDC = DetermineSign(residualDC, numDataBits);
+#if DEBUGLEVEL > 50
+                        cout << "Delta of DC coefficient with sign " << residualDC << endl;
+#endif
+                        DCT_tcoeff[0] = residualDC + previousDC[currentComponent];
+                        previousDC[currentComponent] = DCT_tcoeff[0];
+                        
+#if DEBUGLEVEL > 50
+                        //cout << "Component: " << currentComponent  << ", DC coefficient is: " << DCT_tcoeff[0] << " and prev DC coeff is updated" << endl;
+                        //if (ftell(fp) >= 1930) {
+                        cout << "DC Postion in Byte: " << ftell(fp) << endl;
+                        cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                        printf("Code: %X \n", code);
+                        cout << "Component:" << currentComponent << endl;
+                        cout << "Decoded value in hex: " << std::hex << numDataBits << endl;
+                        cout << std::dec << "DC coeff: " << DCT_tcoeff[0] << endl;
+                        cout << "residual DC: " << residualDC << endl;
+                        cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
+                        //}
+#endif
+                    } // end else
+                    // Found so we can exit out
+                    break;
+                } // end if is_exist
+            } // end for loop on codeLengths
+            
+            if (!found){
+                cout << "-|- ##ERROR## (DC case) Code value not found in Huffman table: " << endl;
+                return;
+            }
+            
+            // No AC coefficients required?
+            if (ACcount == 0 || losslessFormat) { // i.e. DC output to m_DCT
+                Component comp = components.at(currentComponent);
+                comp.m_DCT[0] = (DCT_tcoeff[0] << approximationL);
+                return;
+            }
+        }
+        else {// DC Refine Scans
+            //  This part saves the DC coefficient for a data unit in refining
+            //  DC scans for the component.
+            // Retrieve Data firstly
+            switch (currentComponent) {
+                case COMPONENT_Y:
+                    DCT_tcoeff[0] = tCoeff_Y[currentY_dct[currentComponent]][currentX_dct[currentComponent]];
+                    break;
+                case COMPONENT_Cb:
+                    DCT_tcoeff[0] = tCoeff_Cb[currentY_dct[currentComponent]][currentX_dct[currentComponent]];
+                    break;
+                case COMPONENT_Cr:
+                    DCT_tcoeff[0] = tCoeff_Cr[currentY_dct[currentComponent]][currentX_dct[currentComponent]];
+                    break;
+                default:
+                    DCT_tcoeff[0] = tCoeff_Y[currentY_dct[currentComponent]][currentX_dct[currentComponent]];
+                    break;
+            } // end switch
+            Component comp = components.at(currentComponent);
+            if (GetNBits(1) != 0) {
+                DCT_tcoeff[0] |= (1 << approximationL);
+                //DCT_tcoeff[0] = 128;
+            }
+            comp.m_DCT[0] = DCT_tcoeff[0];
+        }
+    }
+    else {
+        // NOTE: rrrr = count_0  ssss = size_val
+        // Zigzag != 0 --> AC Scans
+        int coeff_counter;
+        if (zigZagStart != 0 && approximationH != 0) progressive_AC_refine = true;
+        bool progressive_done = false;
+        bool EOB_found = false;
+        
+        if (!progressive_AC_refine) { // AC First Scans
+            if (EOB_run > 0) {
+                // If a previous call created a nonzero EOB run then we decrement the
+                // counter and return.
+                --EOB_run;
+            }
+            else {
+                for (coeff_counter = zigZagStart; coeff_counter <= zigZagEnd;) {
+                    int codeLength = 0;
+                    for (codeLength = 1; codeLength <= 16; ++codeLength) {
+                        // found in huffman table
+                        found = false;
+                        
+                        // Keep grabbing one bit at a time till we find one thats a huffman code
+                        int code = LookNBits(codeLength);
+                        
+                        // Check if its one of our huffman codes
+                        // Current Huffman table (AC table)
+                        if (is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue, false))
+                        {
+                            // Skip over k bits, since we found the huffman value
+                            // and looked ahead before
+                            SkipNBits(codeLength);
+                            // set the found in huffman table to true
+                            found = true;
+                            
+                            // Let's separate byte to two nibbles
+                            int valCode = decodedValue;
+                            uint_8 count_0 = valCode >> 4;	// Number RunLengthZeros
+                            uint_8 size_val = valCode & 0xF;	// Number of bits for our data
+                            
+                            if (size_val == 0) {
+                                // A zero value ssss with rrrr == 15 means to skip
+                                // 16 zero coefficients.
+                                if (count_0 == 0xF) {
+                                    coeff_counter += 16;  // skip 16 zeros
+                                }
+                                else {
+                                    // A zero value ssss with rrrr != 15 means to create
+                                    // End of Band run.
+                                    
+                                    // The EOB run includes the current block. This is why we
+                                    // do no processing for rrrr = 0 and substract one when
+                                    // rrrr != 0.
+                                    if (count_0 != 0) {
+                                        int length_temp = count_0;
+                                        int bits = GetNBits(length_temp);
+                                        EOB_run = (1 << count_0) + bits - 1;
+                                    }
+                                    EOB_found = true;
+                                    break;
+                                }
+                                
+                            } // end if (size_val == 0)
+                            else
+                            {
+                                // When ssss != 0, rrrr gives the number of zero elements to skip
+                                // before the next non-zero coefficient.
+                                coeff_counter += count_0; //skip count_0 zeroes
+                                // if the coeffs counter is greater than normally 63 coeffs
+                                if (coeff_counter > 63) {
+                                    cout << ftell(fp) << endl;
+                                    cout << "-|- ##ERROR## Coefficients counter = " << coeff_counter << " is greater than ACcount " << ACcount << endl;
+                                    // in case of error, doing the other stuff will just do more errors so return here
+                                    return;
+                                } // end if
+                                
+                                short ac_coeff = GetNBits(size_val);
+                                ac_coeff = DetermineSign(ac_coeff, size_val);
+                                DCT_tcoeff[coeff_counter++] = (ac_coeff << (int) approximationL);
+                                
+#if DEBUGLEVEL > 50
+                                //cout << "Decoded value, run_len, size_val: " << (int) valCode << "--" << (int) count_0 << "--" << (int)size_val << endl;
+                                //cout  << "AC coeff: " << ac_coeff << endl;
+                                //cout  << "Code: " << (int)code << " -- Length: " << (int)codeLength << endl;
+                                if (ftell(fp) >= 32936) {
+                                    cout << std::dec << "Postion in Byte: " << ftell(fp) << endl;
+                                    cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                                    printf("Code: %X \n", code);
+                                    cout << "Component:" << currentComponent << endl;
+                                    cout << "Decoded value, run_len, size_val: " << (int)valCode << "--" << (int)count_0 << "--" << (int)size_val << endl;
+                                    cout << "Decoded value in hex: " << std::hex << valCode << endl;
+                                    cout << std::dec << "AC coeff: " << ac_coeff << endl;
+                                    cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
+                                    cout << std::hex << "reservoir @ end: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+                                }
+#endif
+                            } // end else
+                            // Found so we can exit out
+                            break;
+                        }// end if is_exist_in_huffman_codes
+                    } // end for codeLengths
+                    
+                    if (!found) {
+                        cout << ftell(fp) << endl;
+                        cout << currentX << "  " << currentY;
+                        cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
+                        return;
+                    }
+                    
+                    if (codeLength > 16) {
+                        coeff_counter++;
+                    }
+                    if (EOB_found) break;
+                }
+            }
+        }
+        else { //AC Refine
+            //    Section G.1.2.3 defines how to encode refining scans for AC
+            //    coefficients. Unfortunately this section is vague and
+            //    undecipherable. Reversing an undecipherable process results
+            //    in something unimaginable. This is a "best-guess" interpretation
+            //    that seems to work.
+            //
+            //    The basic process at work is that zero counts do not include nonzero
+            //    values. Whenever we skip a value due to zero count or End of Band runs
+            //    we have to read one bit to refine each non-zero value we skip. The
+            //    process is ugly and it means that data is encoding out of order.
+            // Retrieve Saved DCT value for current block
+            for (int i = 0; i < 64; ++i)
+            {
+                switch (currentComponent) {
+                    case COMPONENT_Y:
+                        DCT_tcoeff[i] = tCoeff_Y [currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                        break;
+                    case COMPONENT_Cb:
+                        DCT_tcoeff[i] = tCoeff_Cb[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                        break;
+                    case COMPONENT_Cr:
+                        DCT_tcoeff[i] = tCoeff_Cr[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                        break;
+                    default:
+                        DCT_tcoeff[i] = tCoeff_Y [currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                        break;
+                } // end switch
+                
+            }
+            
+            for (coeff_counter = zigZagStart; coeff_counter <= zigZagEnd;) {
+                if (EOB_run != 0) {
+                    // An EOB run has caused us to skip entire data units. We need
+                    // to refine any previously non-zero coefficients.
+                    // Notice that we do not initialize kk here. We could be using
+                    // an EOB run to skip all the remaining coefficients in the current one.
+                    for (; coeff_counter <= zigZagEnd; ++coeff_counter) {
+                        // REFINE AC COEFFICIENT
+                        if (DCT_tcoeff[coeff_counter] != 0) {
+                            if (DCT_tcoeff[coeff_counter] > 0) {
+                                if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (1 << approximationL);
+                            }
+                            else if (DCT_tcoeff[coeff_counter] < 0) {
+                                if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (-1 << approximationL);
+                            }
+                        }
+                    }
+                    --EOB_run;
+                }
+                else {
+                    int codeLength = 0;
+                    for (codeLength = 1; codeLength <= 16; ++codeLength) {
+                        // found in huffman table
+                        found = false;
+                        
+                        // Keep grabbing one bit at a time till we find one thats a huffman code
+                        int code = LookNBits(codeLength);
+                        
+                        // Check if its one of our huffman codes
+                        // Current Huffman table (AC table)
+                        if (is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue, false))
+                        {
+                            // Skip over k bits, since we found the huffman value
+                            // and looked ahead before
+                            /*if (ftell(fp) >= 1930) {
+                             cout << std::hex << "reservoir: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+                             }*/
+                            SkipNBits(codeLength);
+                            // set the found in huffman table to true
+                            found = true;
+                            
+                            // Let's separate byte to two nibbles
+                            int valCode = decodedValue;
+                            uint_8 count_0 = valCode >> 4;	// Number RunLengthZeros
+                            uint_8 size_val = valCode & 0xF;	// Number of bits for our data
+                            
+                            if (size_val == 0) {
+                                // ssss == 0 means that we either have an EOB run or we need to
+                                // 16 non-zero coefficients.
+                                if (count_0 == 0xF) {
+                                    //coeff_counter += 16;  // skip 16 zeros
+                                    for (unsigned int ii = 0; coeff_counter <= zigZagEnd && ii < 16; ++coeff_counter) {
+                                        if (coeff_counter > zigZagEnd) cout << " - | -##ERROR## Coefficient Counter out of range @ AC Refine" << endl;
+                                        // REFINE AC COEFFICIENT
+                                        if (DCT_tcoeff[coeff_counter] != 0) {
+                                            if (DCT_tcoeff[coeff_counter] > 0) {
+                                                if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (1 << approximationL);
+                                            }
+                                            else if (DCT_tcoeff[coeff_counter] < 0) {
+                                                if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (-1 << approximationL);
+                                            }
+                                        }
+                                        else {
+                                            ++ii;
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (count_0 == 0) {
+                                        EOB_run = 1;
+                                    }
+                                    else {
+                                        int length_temp = count_0;
+                                        int bits = GetNBits(length_temp);
+                                        EOB_run = (1 << count_0) + bits;
+                                    }
+                                }
+                            } // end if (size_val == 0)
+                            else if (size_val == 1)
+                            {
+                                // ssss == 1 means that we are creating a new non-zero
+                                // coefficient. rrrr gives the number of zero coefficients to
+                                // skip before we reach this one.
+                                // Save the value for the new coefficient. Unfortunately the data
+                                // is stored out of order.
+                                int length_temp = 1;
+                                int newvalue = GetNBits(length_temp);
+                                
+                                for (unsigned int zerocount = 0; coeff_counter <= 63 && (zerocount < count_0 || DCT_tcoeff[coeff_counter] != 0); ++coeff_counter) {
+                                    
+                                    if (coeff_counter > zigZagEnd) {
+                                        cout << "-|- ##ERROR## IN AC REFINE 1: Coefficients counter = " << coeff_counter << " is greater than ACcount " << ACcount << endl;
+                                        return;
+                                    } // end if
+                                    
+                                    // REFINE AC COEFFICIENT
+                                    if (DCT_tcoeff[coeff_counter] != 0) {
+                                        if (DCT_tcoeff[coeff_counter] > 0) {
+                                            if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (1 << approximationL);
+                                        }
+                                        else if (DCT_tcoeff[coeff_counter] < 0) {
+                                            if (GetNBits(1) != 0) DCT_tcoeff[coeff_counter] += (-1 << approximationL);
+                                        }
+                                    }
+                                    else {
+                                        ++zerocount;
+                                    }
+                                }
+                                
+                                if (coeff_counter > zigZagEnd) {
+                                    cout << ftell(fp) << endl;
+                                    cout << "-|- ##ERROR## IN AC REFINE 2: Coefficients counter = " << coeff_counter << " is greater than ACcount " << ACcount << endl;
+                                    return;
+                                } // end if
+                                
+                                if (newvalue) {
+                                    DCT_tcoeff[coeff_counter++] = (1 << (int)approximationL);
+                                }
+                                else {
+                                    DCT_tcoeff[coeff_counter++] = (-1 << (int)approximationL);
+                                }
+                                //short ac_coeff = GetNBits(size_val);
+                                //ac_coeff = DetermineSign(ac_coeff, size_val);
+                                //DCT_tcoeff[coeff_counter++] = (ac_coeff << approximationL);
+                                
+#if DEBUGLEVEL > 50
+                                //cout << "Decoded value, run_len, size_val: " << (int) valCode << "--" << (int) count_0 << "--" << (int)size_val << endl;
+                                //cout  << "AC coeff: " << ac_coeff << endl;
+                                //cout  << "Code: " << (int)code << " -- Length: " << (int)codeLength << endl;
+                                if (ftell(fp) >= 32936) {
+                                    cout << std::dec << "Postion in Byte: " << ftell(fp) << endl;
+                                    cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                                    printf("Code: %X \n", code);
+                                    cout << "Component:" << currentComponent << endl;
+                                    cout << "Decoded value, run_len, size_val: " << (int)valCode << "--" << (int)count_0 << "--" << (int)size_val << endl;
+                                    cout << "Decoded value in hex: " << std::hex << valCode << endl;
+                                    cout << std::dec << "AC coeff: " << ac_coeff << endl;
+                                    cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
+                                    cout << std::hex << "reservoir @ end: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+                                }
+#endif
+                            } // end else
+                            // Found so we can exit out
+                            break;
+                        }// end if is_exist_in_huffman_codes
+                    } // end for codeLengths
+                    
+                    if (!found) {
+                        cout << ftell(fp) << endl;
+                        cout << currentX << "  " << currentY;
+                        cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
+                        return;
+                    }
+                    
+                    if (codeLength > 16) {
+                        coeff_counter++;
+                    }
+                    if (EOB_found) break;
+                }
+            }
+        }
+        
+        // We've decoded a block of data, so copy it across to our buffer
+        Component comp = components.at(currentComponent);
+        for (int j = zigZagStart; j <= zigZagEnd; ++j) {
+            comp.m_DCT[j] = DCT_tcoeff[j];
+        }
+        
+#if DEBUGLEVEL > 30
+        if (currentX == 224 && currentY == 0) {
+            dumpDCTValues(comp.m_DCT);
+        }
+        
+#endif
+    }
+} // end process_huffmann_data_unit_progressive
+
+// Process Huffman Data in Sequential Mode
+void jpeg_decoder::process_huffmann_data_unit(int currentComponent, int currentX, int currentY) {
+    // We memset it here, as later on we can just skip along, when we have lots
+    // of leading zeros, for our AC run length encoding :)
+    short DCT_tcoeff[64];
+    memset(DCT_tcoeff, 0, sizeof(DCT_tcoeff)); //Initialize DCT_tcoeff
     // How many AC elements should we read?
     int ACcount = zigZagEnd - zigZagStart;
     
@@ -1108,11 +1580,11 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
         
         // Check if its one of our huffman codes
         // Current Huffman table (Initially DC)
-        if(is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue))
+        if (is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue))
         {
-			/*if (ftell(fp) >= 1930) {
-				cout << std::hex << "reservoir: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
-			}*/
+            /*if (ftell(fp) >= 1930) {
+             cout << std::hex << "reservoir: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+             }*/
             // you looked ahead, skip those bits
             SkipNBits(codeLength);
             
@@ -1148,47 +1620,36 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
                 cout << "Delta of DC coefficient with sign " << residualDC << endl;
 #endif
                 
-                DCT_tcoeff[0]                = residualDC + previousDC[currentComponent];
+                DCT_tcoeff[0] = residualDC + previousDC[currentComponent];
                 previousDC[currentComponent] = DCT_tcoeff[0];
                 
 #if DEBUGLEVEL > 50
                 //cout << "Component: " << currentComponent  << ", DC coefficient is: " << DCT_tcoeff[0] << " and prev DC coeff is updated" << endl;
-				//if (ftell(fp) >= 1930) {
-					cout << "DC Postion in Byte: " << ftell(fp) << endl;
-					cout << "Code: " << code << " -- Length: " << codeLength << endl;
-					printf("Code: %X \n", code);
-					cout << "Component:" << currentComponent << endl;
-					cout << "Decoded value in hex: " << std::hex << numDataBits << endl;
-					cout << std::dec << "DC coeff: " << DCT_tcoeff[0] << endl;
-					cout << "residual DC: " << residualDC << endl;
-					cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
-				//}
+                if (ftell(fp) >= 1930) {
+                    cout << "DC Postion in Byte: " << ftell(fp) << endl;
+                    cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                    printf("Code: %X \n", code);
+                    cout << "Component:" << currentComponent << endl;
+                    cout << "Decoded value in hex: " << std::hex << numDataBits << endl;
+                    cout << std::dec << "DC coeff: " << DCT_tcoeff[0] << endl;
+                    cout << "residual DC: " << residualDC << endl;
+                    cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
+                }
 #endif
-				
-				
             } // end else
-            
             // Found so we can exit out
             break;
-            
         } // end if is_exist
-        
     } // end for loop on codeLengths
     
-    if (!found)
-    {
-        cout << "-|- ##ERROR## (DC case) Code value not found in Huffman table: " <<endl;
+    if (!found){
+        cout << "-|- ##ERROR## (DC case) Code value not found in Huffman table: " << endl;
         return;
     }
     
     // No AC coefficients required?
-    if (ACcount == 0 || losslessFormat){
-        // cout << "-|- ##ERROR## (ACcount == 0 || losslessFormat) No AC coefficients reading is required! " << endl;
-		Component comp = components.at(currentComponent);
-		for (int j = zigZagStart; j <= zigZagEnd; ++j)
-		{
-			comp.m_DCT[j] = DCT_tcoeff[j];
-		}
+    if (ACcount == 0 || losslessFormat) {
+        cout << "-|- ##ERROR## (ACcount == 0 || losslessFormat) No AC coefficients reading is required! " << endl;
         return;
     }
     
@@ -1205,16 +1666,16 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
             
             // Keep grabbing one bit at a time till we find one thats a huffman code
             int code = LookNBits(codeLength);
-			
+            
             // Check if its one of our huffman codes
             // Current Huffman table (AC table)
-            if(is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue, false))
+            if (is_exist_in_huffman_codes(code, codeLength, currentComponent, decodedValue, false))
             {
                 // Skip over k bits, since we found the huffman value
                 // and looked ahead before
-				/*if (ftell(fp) >= 1930) {
-					cout << std::hex << "reservoir: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
-				}*/
+                /*if (ftell(fp) >= 1930) {
+                 cout << std::hex << "reservoir: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+                 }*/
                 SkipNBits(codeLength);
                 // set the found in huffman table to true
                 found = true;
@@ -1225,17 +1686,16 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
                  * SSSS bits defines the #binary digits our AC element has (if 1001
                  * then we have to read next 9 elements from file)
                  */
-
+                
                 // Let's separate byte to two nibbles
-                int valCode     = decodedValue;
-                uint_8 count_0  = valCode >> 4;	// Number RunLengthZeros
+                int valCode = decodedValue;
+                uint_8 count_0 = valCode >> 4;	// Number RunLengthZeros
                 uint_8 size_val = valCode & 0xF;	// Number of bits for our data
-				
-				/*cout << "Code: " << code << " -- Length: " << codeLength << endl;
-				printf("Code: %X \n", code);*/
-				
-                if (size_val == 0)
-                {
+                
+                /*cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                 printf("Code: %X \n", code);*/
+                
+                if (size_val == 0){
                     // RLE
                     if (count_0 == 0) {
                         EOB_found = true;	// EOB found, go out
@@ -1257,25 +1717,25 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
                         // in case of error, doing the other stuff will just do more errors so return here
                         return;
                     } // end if
-                                        
-                    short ac_coeff              = GetNBits(size_val );
-                    ac_coeff                    = DetermineSign(ac_coeff, size_val);
+                    
+                    short ac_coeff = GetNBits(size_val);
+                    ac_coeff = DetermineSign(ac_coeff, size_val);
                     DCT_tcoeff[coeff_counter++] = ac_coeff;
 #if DEBUGLEVEL > 50
-					//cout << "Decoded value, run_len, size_val: " << (int) valCode << "--" << (int) count_0 << "--" << (int)size_val << endl;
-					//cout  << "AC coeff: " << ac_coeff << endl;
-					//cout  << "Code: " << (int)code << " -- Length: " << (int)codeLength << endl;
-					if (ftell(fp) >= 1930) {
-						cout <<std::dec<< "Postion in Byte: " << ftell(fp) << endl;
-						cout << "Code: " << code << " -- Length: " << codeLength << endl;
-						printf("Code: %X \n", code);
-						cout << "Component:"<< currentComponent << endl;
-						cout << "Decoded value, run_len, size_val: " << (int)valCode << "--" << (int)count_0 << "--" << (int)size_val << endl;
-						cout << "Decoded value in hex: " << std::hex << valCode << endl;
-						cout << std::dec<< "AC coeff: " << ac_coeff << endl;
-						cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
-						cout << std::hex << "reservoir @ end: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
-					}
+                    //cout << "Decoded value, run_len, size_val: " << (int) valCode << "--" << (int) count_0 << "--" << (int)size_val << endl;
+                    //cout  << "AC coeff: " << ac_coeff << endl;
+                    //cout  << "Code: " << (int)code << " -- Length: " << (int)codeLength << endl;
+                    if (ftell(fp) >= 1930) {
+                        cout << std::dec << "Postion in Byte: " << ftell(fp) << endl;
+                        cout << "Code: " << code << " -- Length: " << codeLength << endl;
+                        printf("Code: %X \n", code);
+                        cout << "Component:" << currentComponent << endl;
+                        cout << "Decoded value, run_len, size_val: " << (int)valCode << "--" << (int)count_0 << "--" << (int)size_val << endl;
+                        cout << "Decoded value in hex: " << std::hex << valCode << endl;
+                        cout << std::dec << "AC coeff: " << ac_coeff << endl;
+                        cout << "postion X:" << currentX << ", position Y:" << currentY << endl;
+                        cout << std::hex << "reservoir @ end: " << g_reservoir << "--" << g_nbits_in_reservoir << endl;
+                    }
 #endif
                 } // end else
                 
@@ -1284,9 +1744,8 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
             }// end if is_exist_in_huffman_codes
         } // end for codeLengths
         
-        if (!found)
-        {
-            cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " <<endl;
+        if (!found){
+            cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
             return;
         }
         
@@ -1295,91 +1754,92 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent , int current
             coeff_counter++;
         }
         
-    }while( (coeff_counter<=63) && (!EOB_found) );
+    } while ((coeff_counter <= 63) && (!EOB_found));
     
     // We've decoded a block of data, so copy it across to our buffer
     Component comp = components.at(currentComponent);
-	for (int j = zigZagStart; j <= zigZagEnd; ++j)
+    for (int j = 0; j < 64; ++j)
     {
         comp.m_DCT[j] = DCT_tcoeff[j];
     }
     
 #if DEBUGLEVEL > 30
-	if (currentX == 224 && currentY == 0) {
-		dumpDCTValues(comp.m_DCT);
-	}
+    if (currentX == 224 && currentY == 0) {
+        dumpDCTValues(comp.m_DCT);
+    }
     
 #endif
     
 } // end process_huffmann_data_unit
 
-
 void jpeg_decoder::decode_single_block(int offset, int stride, int currentComponent, uint_8 *outputBuf, int currentX, int currentY) {
-
-	// fetch the DCT coefficients for the component
-	short* input_dct_coeffs = components.at(currentComponent).m_DCT;
-
-	// Create a temp 8x8, i.e. 64 array for the data
-	int data[64] = { 0 };
-	// Retrieve stored DCT value from the t_Coeff
-	for (int i = 0; i < 64; ++i)
-	{
-		switch (currentComponent) {
-		case COMPONENT_Y:
-			data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
-			break;
-		case COMPONENT_Cb:
-			data[i] = tCoeff_Cb[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
-			break;
-		case COMPONENT_Cr:
-			data[i] = tCoeff_Cr[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
-			break;
-		default:
-			data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
-			break;
-		} // end switch
-		 
-	}
-
-	// Copy our data into the temp array
-	for (int i = zigZagStart; i <= zigZagEnd; ++i)
-	{
-		data[i] = input_dct_coeffs[i];
-	}
-
+    
+    // fetch the DCT coefficients for the component
+    short* input_dct_coeffs = components.at(currentComponent).m_DCT;
+    
+    // Create a temp 8x8, i.e. 64 array for the data
+    int data[64] = { 0 };
+    
+    // Progressive Only: Retrieve stored DCT value from the t_Coeff
+    if (progressive_Huff_Format) {
+        for (int i = 0; i < 64; ++i)
+        {
+            switch (currentComponent) {
+                case COMPONENT_Y:
+                    data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                    break;
+                case COMPONENT_Cb:
+                    data[i] = tCoeff_Cb[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                    break;
+                case COMPONENT_Cr:
+                    data[i] = tCoeff_Cr[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                    break;
+                default:
+                    data[i] = tCoeff_Y[currentY_dct[currentComponent] + floor(i / 8)][currentX_dct[currentComponent] + (i % 8)];
+                    break;
+            } // end switch
+        }
+    }
+    
+    // Copy our data into the temp array
+    for (int i = zigZagStart; i <= zigZagEnd; ++i)
+    {
+        data[i] = input_dct_coeffs[i];
+    }
+    
 #if DEBUGLEVEL > 14
-	cout << "Block init 1: \n" << endl;
-	for (int i = 0; i < 8; ++i) {
-		for (int j = 0; j < 8; ++j) {
-
-			int c = j + 8 * i;
-			cout << data[c] << " ";
-		}
-
-		cout << "\n";
-	}
+    cout << "Block init 1: \n" << endl;
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            
+            int c = j + 8 * i;
+            cout << data[c] << " ";
+        }
+        
+        cout << "\n";
+    }
 #endif
-
-	// Create a reshaped matrix of size 8x8
-	int dataReshapedInto8x8[8][8] = { 0 };
-	reshapeArrayInto8x8(dataReshapedInto8x8, data);
-
+    
+    // Create a reshaped matrix of size 8x8
+    int dataReshapedInto8x8[8][8] = { 0 };
+    reshapeArrayInto8x8(dataReshapedInto8x8, data);
+    
 #if DEBUGLEVEL > 20
-	if (currentX == 1008 && currentY == 0 && currentComponent == COMPONENT_Cb) {
-		cout << "after reshapeArrayInto8x8 " << endl;
-		//    dumpDecodedBlock(dataReshapedInto8x8);
-		dumpDecodedBlockInDecimal(dataReshapedInto8x8);
-}
+    if (currentX == 1008 && currentY == 0 && currentComponent == COMPONENT_Cb) {
+        cout << "after reshapeArrayInto8x8 " << endl;
+        //    dumpDecodedBlock(dataReshapedInto8x8);
+        dumpDecodedBlockInDecimal(dataReshapedInto8x8);
+    }
 #endif
     
 #if DEBUGLEVEL > 50
-//    // TODO: remove FANKOOSH
+    //    // TODO: remove FANKOOSH
     static int fankoosh = 0;
     if(currentComponent == COMPONENT_Y) {
-		fankoosh++;
+        fankoosh++;
         ofstream myfile;
-        std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/JPEG/JPEG/";
-        std::string output_csv_name = path_to_files + "dog_Y_dec.csv";
+        std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/JPEG/";
+        std::string output_csv_name = path_to_files + "goose_Y_dec.csv";
         myfile.open (output_csv_name, std::ofstream::out | std::ofstream::app);
         
         std::stringstream oss;
@@ -1388,96 +1848,93 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
         found = output_csv_name.find_last_of("/\\");
         std::string name_file_only = path_with_name.substr(found+1);
         
-		myfile << currentX << "-" << currentY << "\n";
-
-		if (currentX == 1008 && currentY == 0) {
-			cout << currentX << "-" << currentY << "\n";
-		}
-
+        myfile << currentX << "-" << currentY << "\n";
+        
+        if (currentX == 1008 && currentY == 0) {
+            cout << currentX << "-" << currentY << "\n";
+        }
+        
         for(int i = 0; i < 8; ++i) {
             for(int j = 0; j < 8; ++j) {
                 myfile << dataReshapedInto8x8[i][j] << ",";
-
-				if (currentX == 1008 && currentY == 0) {
-					cout << dataReshapedInto8x8[i][j] << ",";
-				}
+                
+                if (currentX == 1008 && currentY == 0) {
+                    cout << dataReshapedInto8x8[i][j] << ",";
+                }
             }
             
-			if (currentX >= 1008 && currentY == 0) {
-				cout << "\n";
-			}
-
+            if (currentX >= 1008 && currentY == 0) {
+                cout << "\n";
+            }
+            
             if( (i + 1) < jpegImageHeight){
                 myfile << "\n";
             }
-        }        
+        }
         myfile.close();
     }
-#endif    
-    
-    
-    // Perform dequantization
-    multiplyWithQuantizationTable (dataReshapedInto8x8, currentComponent);
-    
-    // Perform inverse zig zag scanning
-    int dataReshapedInto8x8Zig[8][8]={0};
-    inverseZigZagScanning(dataReshapedInto8x8Zig, dataReshapedInto8x8);
-    
-#if DEBUGLEVEL > 20
-	if (currentX == 1008 && currentY == 0 && currentComponent == COMPONENT_Cb) {
-		cout << "Before IDCT and after quantization in decimal representation: " << endl;
-		dumpDecodedBlockInDecimal(dataReshapedInto8x8Zig);
-	}
 #endif
     
-    // Add the raw DCT coefficients after dequantization after inverse zigzag scanning:
-    addtCoeffBlock(dataReshapedInto8x8Zig, currentComponent, currentX, currentY);
-
-    
-    // Perform IDCT
-    int output_value_dct[8][8]={0};
-    perform_idct(output_value_dct, dataReshapedInto8x8Zig);
-    
-
+    // If sequential, process firsly; if progressive, save and process later
+    if (!progressive_Huff_Format) {
+        // Perform dequantization
+        multiplyWithQuantizationTable(dataReshapedInto8x8, currentComponent);
+        
+        // Perform inverse zig zag scanning
+        int dataReshapedInto8x8Zig[8][8] = { 0 };
+        inverseZigZagScanning(dataReshapedInto8x8Zig, dataReshapedInto8x8);
+        
 #if DEBUGLEVEL > 20
-    cout << "After IDCT and after quantization in decimal representation: " << endl;
-    dumpDecodedBlockInDecimal(output_value_dct);
+        if (currentX == 1008 && currentY == 0 && currentComponent == COMPONENT_Cb) {
+            cout << "Before IDCT and after quantization in decimal representation: " << endl;
+            dumpDecodedBlockInDecimal(dataReshapedInto8x8Zig);
+        }
 #endif
-    
-    
-    // Note: it does not matter the component has subsampling or not
-    // addBlockSubsampling will take care of it - the method is general
-    addBlockSubsampling(output_value_dct, currentComponent);
-    
-    // Perform transpose (your block is transposed compared to the reference
-    // code)
-    int output_value[8][8]={0};
-    transpose(output_value, output_value_dct);
-    
-    // Level Shift each element (i.e. add 128), and copy to our
-    // output
-    unsigned char *outptr = outputBuf;
-    for(int y = 0; y < 8; ++y)
-    {
-        for(int x = 0; x < 8; ++x)
-        {
-            // TODO: use switch instead of if
-            // Only 8 and 12-bit is supported by DCT per JPEG standard
-            if (jpegImageSamplePrecision == 8) {
-                output_value[x][y] += 128;
-            }
-            else if (jpegImageSamplePrecision == 12) {
-                output_value[x][y] += 2048;
-            }
-            
-            outptr[x] = Clamp(output_value[x][y]);
-            
-        } // end inner loop
-        outptr += stride;
-    } // end outer loop
-    
-    
-    
+        // Add the raw DCT coefficients after dequantization after inverse zigzag scanning:
+        addtCoeffBlock(dataReshapedInto8x8Zig, currentComponent, currentX, currentY);
+        
+        // Perform IDCT
+        int output_value_dct[8][8] = { 0 };
+        perform_idct(output_value_dct, dataReshapedInto8x8Zig);
+        
+#if DEBUGLEVEL > 20
+        cout << "After IDCT and after quantization in decimal representation: " << endl;
+        dumpDecodedBlockInDecimal(output_value_dct);
+#endif
+        
+        // Note: it does not matter the component has subsampling or not
+        // addBlockSubsampling will take care of it - the method is general
+        addBlockSubsampling(output_value_dct, currentComponent);
+        
+        // Perform transpose (your block is transposed compared to the reference
+        // code)
+        int output_value[8][8] = { 0 };
+        transpose(output_value, output_value_dct);
+        
+        // Level Shift each element (i.e. add 128), and copy to our
+        // output
+        unsigned char *outptr = outputBuf;
+        for (int y = 0; y < 8; ++y){
+            for (int x = 0; x < 8; ++x)
+            {
+                // TODO: use switch instead of if
+                // Only 8 and 12-bit is supported by DCT per JPEG standard
+                if (jpegImageSamplePrecision == 8) {
+                    output_value[x][y] += 128;
+                }
+                else if (jpegImageSamplePrecision == 12) {
+                    output_value[x][y] += 2048;
+                }
+                
+                outptr[x] = Clamp(output_value[x][y]);
+            } // end inner loop
+            outptr += stride;
+        } // end outer loop
+    }
+    else {
+        // Progressive: ADD tcoeff block in zigzaged form, and quantization/idct done later
+        addtCoeffBlock(dataReshapedInto8x8, currentComponent, currentX, currentY);
+    }
 #if DEBUGLEVEL > 60
     dumpDecodedBlockInDecimal(output_value);
 #endif
@@ -1497,8 +1954,6 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
         cout << "\n";
     }
 #endif
-    
-    
 } // end decode_single_block
 
 float jpeg_decoder::C(int u)
@@ -1727,7 +2182,7 @@ void jpeg_decoder::multiplyWithQuantizationTable(int dataBlock[8][8], int curren
         }
         cout << "\n";
     }
-
+    
     cout << "B) Operation: " << endl;
     for(int i = 0; i < 8; ++i){
         for(int j = 0; j < 8; ++j){
@@ -1750,14 +2205,14 @@ void jpeg_decoder::multiplyWithQuantizationTable(int dataBlock[8][8], int curren
     
     
 #if DEBUGLEVEL > 30
-		cout << "Block After dequant:--------------" << endl;
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				cout << std::dec << dataBlock[i][j] << " ";
-			}
-
-			cout << "\n";
-		}
+    cout << "Block After dequant:--------------" << endl;
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            cout << std::dec << dataBlock[i][j] << " ";
+        }
+        
+        cout << "\n";
+    }
 #endif
     
 } // end multiplyWithQuantizationTable
@@ -1893,180 +2348,295 @@ void jpeg_decoder::addBlockSubsampling(int dataBlock[8][8], int comp /* Current 
 
 
 void jpeg_decoder::addtCoeffBlock(int dataBlock[8][8], int comp /* Current component */, int currentX, int currentY ) {
-
-//    cout << comp << ") Adding dct block at X: " << currentX_dct[comp]  << ", Y: " << currentY_dct[comp] << endl;
+    
+    //    cout << comp << ") Adding dct block at X: " << currentX_dct[comp]  << ", Y: " << currentY_dct[comp] << endl;
     
     // How many Y's in the horizontal and vertical direction (2x2 is the usual case)
     int HFactor = components[comp].HFactor, VFactor = components[comp].VFactor;
     
     // These Y's should be scaled/repeated how many times horizonatally and vertically
     int HScale = components[comp].HScale,   VScale = components[comp].VScale;
-	
-	// Note: you should use the upscaled width and upscaled height
-	int comp_height = ceil(1.0 * upscale_height   /  VScale);
-	int comp_width  = ceil(1.0 * upscale_width    / HScale); 
-	int width = comp_width, height = comp_height;
-
-
+    
+    // Note: you should use the upscaled width and upscaled height
+    int comp_height = ceil(1.0 * upscale_height   /  VScale);
+    int comp_width  = ceil(1.0 * upscale_width    / HScale);
+    int width = comp_width, height = comp_height;
+    
+    
 #if DEBUGLEVEL > 20
-	if (currentX == 1008 && currentY == 0 && comp == COMPONENT_Cb) {
-		cout << comp << ") Reporting information about the image and the component... " << endl;
-		cout << "Width: " << width << " Height: " << height << endl;
-		cout << "HScale: " << HScale << ", VScale: " << VScale << endl;
-		cout << "Sent currentX , currentY " << currentX << ", " << currentY << endl;
-		cout << "Calculated currentX, currentY  " << currentX_dct[comp]
-			<< ", " << currentY_dct[comp] << endl;
-
-
-		cout << "Addtcoeff block init decoder input block: " << endl;
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				cout << dataBlock[i][j] << " ";
-			}
-
-			cout << "\n";
-		}
-
-		cout << "Bye " << endl;
-	}
-	
-
-#endif
-
-    // raster block sanning/traverse using x, y positions:
-    int y;
-    for (y = 0; y < 8; ++y) {
+    if (currentX == 1008 && currentY == 0 && comp == COMPONENT_Cb) {
+        cout << comp << ") Reporting information about the image and the component... " << endl;
+        cout << "Width: " << width << " Height: " << height << endl;
+        cout << "HScale: " << HScale << ", VScale: " << VScale << endl;
+        cout << "Sent currentX , currentY " << currentX << ", " << currentY << endl;
+        cout << "Calculated currentX, currentY  " << currentX_dct[comp]
+        << ", " << currentY_dct[comp] << endl;
         
+        
+        cout << "Addtcoeff block init decoder input block: " << endl;
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                cout << dataBlock[i][j] << " ";
+            }
+            
+            cout << "\n";
+        }
+        
+        cout << "Bye " << endl;
+    }
+    
+    
+#endif
+    int block_idx = (currentX_dct[comp] / 8) + (currentY_dct[comp] / 8) * (width / 8);
+    
+    // raster block sanning/traverse using x, y positions:
+    for (int y = 0; y < 8; ++y) {
         if (currentX_dct[comp] >= width) break;
         if (currentY_dct[comp] + y >= height) break;
-    
-           int picture_y = currentY_dct[comp] + y;
-           
-		   // NEW to TCM: store the DCT coefficient in terms of AC indexes
-		    int block_idx = (currentX_dct[comp] / 8) +   (currentY_dct[comp] / 8) * (width / 8);
-            for (int x = 0; x < 8 ; ++x) {
-                
-				if (currentX_dct[comp] + x >= width) break;
-                
-                int raw_dct_value = dataBlock[y][x];                
-                int realx = currentX_dct[comp] + x;
-				int dct_coeff_idx = x + y * 8;
-                  // Set the pixel <Xcor: realX, Ycor: picture_y>
-                    switch(comp) {
-                        case COMPONENT_Y:
-                            
-                            tCoeff_Y[picture_y][realx] = raw_dct_value;
-
-							// NEW to TCM: store the DCT coefficient in terms of AC indexes
-							tCoeff_Y_AC[dct_coeff_idx][block_idx] = raw_dct_value;
-
-							//cout << "X: " << realx << ", Y: " << picture_y << ", val: " <<  tCoeff_Y[picture_y][realx] << endl;
-                            break;
-                        case COMPONENT_Cb:
-                            
-                          
-                            tCoeff_Cb[picture_y][realx] = raw_dct_value;      
-                          // cout << "X Cb: " << realx << ", Y Cb: " << picture_y << ", val: " <<  tCoeff_Cb[picture_y][realx] << endl;
-                            break;
-                        case COMPONENT_Cr:
-                            tCoeff_Cr[picture_y][realx] = raw_dct_value;
-//                          cout << "X Cr: " << realx << ", Y Cr: " << picture_y << ", val: " <<  tCoeff_Cb[picture_y][realx] << endl;
-                            break;
-                        default:
-                            tCoeff_Y[picture_y][realx] = raw_dct_value;
-                            cout << "-|- ##ERROR## You are sending the wrong component - will assume it's luminance. Most probably will fail!" << endl;
-                            
-                            break;
-                    } // end switch
+        
+        int picture_y = currentY_dct[comp] + y;
+        
+        // NEW to TCM: store the DCT coefficient in terms of AC indexes
+        
+        for (int x = 0; x < 8; ++x) {
+            
+            if (currentX_dct[comp] + x >= width) break;
+            
+            int raw_dct_value = dataBlock[y][x];
+            int realx = currentX_dct[comp] + x;
+            int dct_coeff_idx = x + y * 8;
+            // Set the pixel <Xcor: realX, Ycor: picture_y>
+            switch (comp) {
+                case COMPONENT_Y:
                     
-                    if (++realx >= width) break;
-            } // end for x
+                    tCoeff_Y[picture_y][realx] = raw_dct_value;
+                    
+                    // NEW to TCM: store the DCT coefficient in terms of AC indexes
+                    tCoeff_Y_AC[dct_coeff_idx][block_idx] = raw_dct_value;
+                    
+                    //cout << "X: " << realx << ", Y: " << picture_y << ", val: " <<  tCoeff_Y[picture_y][realx] << endl;
+                    break;
+                case COMPONENT_Cb:
+                    
+                    
+                    tCoeff_Cb[picture_y][realx] = raw_dct_value;
+                    // cout << "X Cb: " << realx << ", Y Cb: " << picture_y << ", val: " <<  tCoeff_Cb[picture_y][realx] << endl;
+                    break;
+                case COMPONENT_Cr:
+                    tCoeff_Cr[picture_y][realx] = raw_dct_value;
+                    //                          cout << "X Cr: " << realx << ", Y Cr: " << picture_y << ", val: " <<  tCoeff_Cb[picture_y][realx] << endl;
+                    break;
+                default:
+                    tCoeff_Y[picture_y][realx] = raw_dct_value;
+                    cout << "-|- ##ERROR## You are sending the wrong component - will assume it's luminance. Most probably will fail!" << endl;
+                    
+                    break;
+            } // end switch
+            
+            if (++realx >= width) break;
+        } // end for x
     } // end for y
-
     
 #if DEBUGLEVEL > 20
-
-	if (currentX == 1008 && currentY == 0 && comp == COMPONENT_Cb) {
-
-		int debug[8][8] = { 0 };
-
-
-		cout << "Reverse operation in decoder: " << endl;
-		cout << "A) Block: " << endl;
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				// debug[i][j] = dataBlock[i][j];
-
-				int realx = currentX_dct[comp] + j;
-				int realy = currentY_dct[comp] + i;
-				debug[i][j] = tCoeff_Y[realy][realx];
-				cout << debug[i][j] << " ";
-				// cout << "X Cb: " << realx << ", Y Cb: " << realy << ", val: " << tCoeff_Cb[realy][realx] << endl;
-			}
-
-			cout << "\n";
-		}
-
-
-		cout << "B) Operation: " << endl;
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				int idx = j + i * 8;
-				int q = components.at(comp).componentQuantizationTable->quantizationTableData[i][j];
-				debug[i][j] = dataBlock[i][j] / q;
-
-				cout << debug[i][j] << " ";
-			}
-
-			cout << "\n";
-		}
-
-		cout << "Yes I found it :P " << endl;
-	}
+    
+    if (currentX == 1008 && currentY == 0 && comp == COMPONENT_Cb) {
+        
+        int debug[8][8] = { 0 };
+        
+        
+        cout << "Reverse operation in decoder: " << endl;
+        cout << "A) Block: " << endl;
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                // debug[i][j] = dataBlock[i][j];
+                
+                int realx = currentX_dct[comp] + j;
+                int realy = currentY_dct[comp] + i;
+                debug[i][j] = tCoeff_Y[realy][realx];
+                cout << debug[i][j] << " ";
+                // cout << "X Cb: " << realx << ", Y Cb: " << realy << ", val: " << tCoeff_Cb[realy][realx] << endl;
+            }
+            
+            cout << "\n";
+        }
+        
+        
+        cout << "B) Operation: " << endl;
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                int idx = j + i * 8;
+                int q = components.at(comp).componentQuantizationTable->quantizationTableData[i][j];
+                debug[i][j] = dataBlock[i][j] / q;
+                
+                cout << debug[i][j] << " ";
+            }
+            
+            cout << "\n";
+        }
+        
+        cout << "Yes I found it :P " << endl;
+    }
     
 #endif
     // currentX_dct and currentY_dct are now 8 pixels below values when function is called
     // they should be 8 pixels to the right multiplied by HScale
     // unless this is image edge, in which case they should be in the next line
-    // Update starting X and Y for next block, taking into account subsampling 
-    HScale = 1; // note: you will store the dct coefficients without any scaling
-    VScale = 1; // note: algorithm below works, but you have to set the scales into 1x1
-    currentX_dct[comp] += 8 * HScale;
-    currentBlockHFactor_dct[comp]++;
+    // Update starting X and Y for next block, taking into account subsampling
     
-    // you made a line of blocks
-    if(currentBlockHFactor_dct[comp] >= HFactor) {
+    if (!progressive_Huff_Format || (progressive_Huff_Format && zigZagStart == 0 && approximationL != 0)) {
+        HScale = 1; // note: you will store the dct coefficients without any scaling
+        VScale = 1; // note: algorithm below works, but you have to set the scales into 1x1
+        currentX_dct[comp] += 8 * HScale;
+        currentBlockHFactor_dct[comp]++;
         
-        // restore the current X to its initial position and reset the counters
-        currentX_dct[comp] -= 8 * HScale * HFactor;
-        currentBlockHFactor_dct[comp] = 0;
-        
-        // go to next line
-        currentY_dct[comp] += 8 * VScale;
-        currentBlockVFactor_dct[comp]++;
-        
-        // you made a column of blocks
-        if (currentBlockVFactor_dct[comp] >= VFactor) {
+        // you made a line of blocks
+        if (currentBlockHFactor_dct[comp] >= HFactor) {
             
-            // restore the current Y to its initial position and reset the counters
-            currentY_dct[comp] -= 8  * VScale * VFactor;
-            currentBlockVFactor_dct[comp] = 0;
+            // restore the current X to its initial position and reset the counters
+            currentX_dct[comp] -= 8 * HScale * HFactor;
+            currentBlockHFactor_dct[comp] = 0;
             
-            currentX_dct[comp] += 8 * HScale * HFactor;
-            if (currentX_dct[comp] >= width) {
-                currentX_dct[comp] = 0;
-                currentY_dct[comp] += 8  * VScale * VFactor;
+            // go to next line
+            currentY_dct[comp] += 8 * VScale;
+            currentBlockVFactor_dct[comp]++;
+            
+            // you made a column of blocks
+            if (currentBlockVFactor_dct[comp] >= VFactor) {
                 
-                // TODO: Progressive JPEG not supported
-                // Force end here because Progressive JPEG file has more stuff after this
-                if (currentY_dct[comp] >= height && comp == components.size()-1) {
-                    endOfFile = true;
-                } // end if (currentX_dct[comp] >= width)
-            } // end if (currentBlockVFactor_dct[comp] >= VFactor)
-            
-        } // end  if (currentBlockVFactor_dct[comp] >= VFactor)
-    } // end if(currentBlockHFactor_dct[comp] >= HFactor)
+                // restore the current Y to its initial position and reset the counters
+                currentY_dct[comp] -= 8 * VScale * VFactor;
+                currentBlockVFactor_dct[comp] = 0;
+                
+                currentX_dct[comp] += 8 * HScale * HFactor;
+                if (currentX_dct[comp] >= width) {
+                    currentX_dct[comp] = 0;
+                    currentY_dct[comp] += 8 * VScale * VFactor;
+                    
+                    // TODO: Progressive JPEG not supported
+                    // Force end here because Progressive JPEG file has more stuff after this
+                    if (currentY_dct[comp] >= height && comp == components.size() - 1) {
+                        endOfFile = true;
+                    } // end if (currentX_dct[comp] >= width)
+                } // end if (currentBlockVFactor_dct[comp] >= VFactor)
+                
+            } // end  if (currentBlockVFactor_dct[comp] >= VFactor)
+        } // end if(currentBlockHFactor_dct[comp] >= HFactor)}
+    }
+    else if ((progressive_Huff_Format && zigZagStart != 0) || (progressive_Huff_Format && zigZagStart == 0 && approximationL == 0)){
+        currentX_dct[comp] += 8;
+        if (currentX_dct[comp] + 8 > width) {
+            currentX_dct[comp] = 0;
+            currentY_dct[comp] += 8;
+        }
+    }
 } // end addtCoeffBlock
+
+void jpeg_decoder::final_process_progressive() {
+    for (int currentComponent = COMPONENT_Y; currentComponent < components.size(); ++currentComponent) {
+        int HFactor = components[currentComponent].HFactor, VFactor = components[currentComponent].VFactor;
+        // These Y's should be scaled/repeated how many times horizonatally and vertically
+        int HScale = components[currentComponent].HScale, VScale = components[currentComponent].VScale;
+        
+        // Note: use the upscaled width and height to store the DCT coefficientss
+        int comp_height = ceil(1.0* upscale_height / VScale);
+        int comp_width = ceil(1.0* upscale_width / HScale);
+        int width = comp_width, height = comp_height;
+        
+        // Initialize the positions
+        int currentX = 0;
+        int currentY = 0;
+        int currentBlockHFactor = 0;
+        int currentBlockVFactor = 0;
+        
+        // loop on the entire picture
+        for (uint i = 0; i < comp_height; i += 8) {
+            for (uint j = 0; j < comp_width; j += 8) {
+                int dataReshapedInto8x8[8][8] = { 0 };
+                // fetch the block
+                uint y;
+                for (y = 0; y < 8; ++y) {
+                    //vector<vector<double> >dataReshapedInto8x8(8, vector<double>(8));
+                    
+                    if (currentX >= width) break;
+                    if (currentY + y >= height) break;
+                    
+                    int picture_y = currentY + y;
+                    
+                    uint x;
+                    for (x = 0; x < 8; ++x) {
+                        
+                        if (currentX + x >= width) break;
+                        int realx = currentX + x;
+                        
+                        if (currentComponent == COMPONENT_Y)
+                            dataReshapedInto8x8[y][x] = tCoeff_Y[picture_y][realx];
+                        else if (currentComponent == COMPONENT_Cb)
+                            dataReshapedInto8x8[y][x] = tCoeff_Cb[picture_y][realx];
+                        else
+                            dataReshapedInto8x8[y][x] = tCoeff_Cr[picture_y][realx];
+                    }
+                }
+                
+                // Perform dequantization
+                multiplyWithQuantizationTable(dataReshapedInto8x8, currentComponent);
+                
+                // Perform inverse zig zag scanning
+                int dataReshapedInto8x8Zig[8][8] = { 0 };
+                inverseZigZagScanning(dataReshapedInto8x8Zig, dataReshapedInto8x8);
+                
+                //store performed data (inverse ZigZag / Dequantization) back to tCoeff
+                for (y = 0; y < 8; ++y) {
+                    int picture_y = currentY + y;
+                    uint x;
+                    for (x = 0; x < 8; ++x) {
+                        int realx = currentX + x;
+                        if (currentComponent == COMPONENT_Y)
+                            tCoeff_Y[picture_y][realx] = dataReshapedInto8x8Zig[y][x];
+                        else if (currentComponent == COMPONENT_Cb)
+                            tCoeff_Cb[picture_y][realx] = dataReshapedInto8x8Zig[y][x];
+                        else
+                            tCoeff_Cr[picture_y][realx] = dataReshapedInto8x8Zig[y][x];
+                    }
+                }
+                
+                // Perform IDCT
+                int output_value_dct[8][8] = { 0 };
+                perform_idct(output_value_dct, dataReshapedInto8x8Zig);
+                addBlockSubsampling(output_value_dct, currentComponent);
+                
+                // Adjust the indices:
+                HScale = 1; // note: you will store the dct coefficients without any scaling
+                VScale = 1; // note: algorithm below works, but you have to set the scales into 1x1
+                currentX += 8 * HScale;
+                currentBlockHFactor++;
+                // you made a line of blocks
+                if (currentBlockHFactor >= HFactor) {
+                    
+                    // restore the current X to its initial position and reset the counters
+                    currentX -= 8 * HScale * HFactor;
+                    currentBlockHFactor = 0;
+                    
+                    // go to next line
+                    currentY += 8 * VScale;
+                    currentBlockVFactor++;
+                    
+                    // you made a column of blocks
+                    if (currentBlockVFactor >= VFactor) {
+                        
+                        // restore the current Y to its initial position and reset the counters
+                        currentY -= 8 * VScale * VFactor;
+                        currentBlockVFactor = 0;
+                        currentX += 8 * HScale * HFactor;
+                        if (currentX >= width) {
+                            currentX = 0;
+                            currentY += 8 * VScale * VFactor;
+                        } // end if (currentBlockVFactor_dct[comp] >= VFactor)
+                    } // end  if (currentBlockVFactor_dct[comp] >= VFactor)
+                } // end if(currentBlockHFactor_dct[comp] >= HFactor)
+            }
+        }
+    }
+}
 
 void jpeg_decoder::IDCT (int block[8][8], int transformedBlock[8][8]) {
     int sum = 0;
@@ -2128,7 +2698,7 @@ void jpeg_decoder::write_bmp24(const std::string output_bmp_filename, int Width,
     // Round up the width to the nearest DWORD boundary
     int iNumPaddedBytes = 4 - (Width * 3) % 4;
     iNumPaddedBytes = iNumPaddedBytes % 4;
-
+    
     stBMFH bh;
     memset(&bh, 0, sizeof(bh));
     bh.bmtype[0]='B';
@@ -2241,7 +2811,7 @@ int jpeg_decoder::display_jpg_yuv(std::string window_name, uint_32 comp) const {
     imshow(window_name, img);
     cv::waitKey(0);
     cout << "Success: " << compType << " has been displayed!" << endl;
-	delete [] temp;
+    delete [] temp;
     return 1;
     
 } // end display_jpg_yuv
@@ -2407,17 +2977,17 @@ int jpeg_decoder::write_tcoeff_y_from_jpg_in_csv(const std::string output_csv_na
 void jpeg_decoder::initPositionsBuffersForPictureBuffer() {   
     // [Buffers for DCT coefficients read from bitstream: ]
     // Create the luminance 2D buffer for the entire picture:
-	// ***************** Change to upscaled size to fit the multiple of 8
+    // ***************** Change to upscaled size to fit the multiple of 8
     int comp_height = ceil(1.0* upscale_height / components.at(COMPONENT_Y).VScale);
     int comp_width = ceil(1.0* upscale_width / components.at(COMPONENT_Y).HScale);
-
+    
     // create the transformed coeffiecients:
     tCoeff_Y.resize(comp_height, vector<int> (comp_width, 0));
-
-	// NEW for TCM: create the tCoeff_Y_AC to store the DCT coefficient in terms of AC indexes
-	tCoeff_Y_AC.resize(64, vector<int>(total_block_Y, 0));
-
-
+    
+    // NEW for TCM: create the tCoeff_Y_AC to store the DCT coefficient in terms of AC indexes
+    tCoeff_Y_AC.resize(64, vector<int>(total_block_Y, 0));
+    
+    
     if(components.size() >= COMPONENT_Cb + 1) {
         // jpegImageHeight * jpegImageWidth
         comp_height = ceil(1.0* upscale_height / components.at(COMPONENT_Cb).VScale);
@@ -2433,7 +3003,7 @@ void jpeg_decoder::initPositionsBuffersForPictureBuffer() {
         comp_width = ceil(1.0* upscale_width / (double) components.at(COMPONENT_Cr).HScale);
         
         // create the transformed coeffiecients:
-         tCoeff_Cr.resize(comp_height, vector<int>(comp_width, 0));
+        tCoeff_Cr.resize(comp_height, vector<int>(comp_width, 0));
     }
     
     // Create the luminance 2D buffer for the entire picture:
@@ -2454,7 +3024,11 @@ void jpeg_decoder::initPositionsBuffersForPictureBuffer() {
         m_CrPicture_buffer[i] = new uint_8[upscale_width];
     }
     
+    initCurrentPosition();
     
+} // end initPositionsBuffersForPictureBuffer
+
+void jpeg_decoder::initCurrentPosition() {
     // Initialize the positions (where you are currently at in the picture):
     for (uint i = 0; i < components.size(); ++i) {
         // Set the co-ordinates of the next block (x, y)
@@ -2466,12 +3040,12 @@ void jpeg_decoder::initPositionsBuffersForPictureBuffer() {
         
         // Set the co-ordinates of the next DCT block (x, y)
         currentX_dct[i] = currentY_dct[i] = 0;
-
+        
         // intitialize BlockHFactor and BlockVFactor (used for dct)
         // counts how many times you scaled your block
         currentBlockHFactor_dct[i] = currentBlockVFactor_dct[i] = 0;
-    } 
-} // end initPositionsBuffersForPictureBuffer
+    }
+}
 
 void jpeg_decoder::deleteDCTComponentPointers() {
     

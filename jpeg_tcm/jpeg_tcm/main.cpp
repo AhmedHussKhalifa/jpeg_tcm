@@ -17,8 +17,6 @@
 #include <opencv2/highgui/highgui.hpp>
 
 
-#include "jpegimage.h"
-
 #include "jpegdecoder.h"
 
 #include "jpegencoder.h"
@@ -37,7 +35,8 @@ int main(int argc, const char * argv[]) {
     std::string path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/";
     
     // yes all lena
-          std::string filename = path_to_files + "Lena.jpg";
+//          std::string filename = path_to_files + "Lena.jpg";
+            std::string filename = path_to_files + "Lena_progressive.jpg";
     //      std::string filename =  path_to_files + "lena_g.jpg";
     //      std::string filename =  path_to_files + "lenaV.jpg";
     //      std::string filename =  path_to_files + "Lena256.jpg";

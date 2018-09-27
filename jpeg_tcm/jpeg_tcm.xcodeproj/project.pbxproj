@@ -12,7 +12,6 @@
 		90DC9183215025B2004FCBCF /* huffmanelementscount.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC916E215025B2004FCBCF /* huffmanelementscount.cpp */; };
 		90DC9184215025B2004FCBCF /* huffmantable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC9170215025B2004FCBCF /* huffmantable.cpp */; };
 		90DC9186215025B2004FCBCF /* jpegencoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC9175215025B2004FCBCF /* jpegencoder.cpp */; };
-		90DC9187215025B2004FCBCF /* jpegimage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC9177215025B2004FCBCF /* jpegimage.cpp */; };
 		90DC9188215025B2004FCBCF /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC9179215025B2004FCBCF /* main.cpp */; };
 		90DC918A215025B2004FCBCF /* quantizationtable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC917C215025B2004FCBCF /* quantizationtable.cpp */; };
 		90DC918D21505523004FCBCF /* jpegdecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 90DC918C21505523004FCBCF /* jpegdecoder.cpp */; };
@@ -46,8 +45,6 @@
 		90DC9174215025B2004FCBCF /* jpegdecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = jpegdecoder.h; sourceTree = "<group>"; };
 		90DC9175215025B2004FCBCF /* jpegencoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jpegencoder.cpp; sourceTree = "<group>"; };
 		90DC9176215025B2004FCBCF /* jpegencoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = jpegencoder.h; sourceTree = "<group>"; };
-		90DC9177215025B2004FCBCF /* jpegimage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jpegimage.cpp; sourceTree = "<group>"; };
-		90DC9178215025B2004FCBCF /* jpegimage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = jpegimage.h; sourceTree = "<group>"; };
 		90DC9179215025B2004FCBCF /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		90DC917A215025B2004FCBCF /* operation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = operation.h; sourceTree = "<group>"; };
 		90DC917C215025B2004FCBCF /* quantizationtable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = quantizationtable.cpp; sourceTree = "<group>"; };
@@ -102,8 +99,6 @@
 				90DC918C21505523004FCBCF /* jpegdecoder.cpp */,
 				90DC9175215025B2004FCBCF /* jpegencoder.cpp */,
 				90DC9176215025B2004FCBCF /* jpegencoder.h */,
-				90DC9177215025B2004FCBCF /* jpegimage.cpp */,
-				90DC9178215025B2004FCBCF /* jpegimage.h */,
 				90DC9179215025B2004FCBCF /* main.cpp */,
 				90DC917A215025B2004FCBCF /* operation.h */,
 				90DC917C215025B2004FCBCF /* quantizationtable.cpp */,
@@ -174,7 +169,6 @@
 				90DC9186215025B2004FCBCF /* jpegencoder.cpp in Sources */,
 				90DC9183215025B2004FCBCF /* huffmanelementscount.cpp in Sources */,
 				90DC918D21505523004FCBCF /* jpegdecoder.cpp in Sources */,
-				90DC9187215025B2004FCBCF /* jpegimage.cpp in Sources */,
 				90DC9182215025B2004FCBCF /* exportpicture.cpp in Sources */,
 				90DC9184215025B2004FCBCF /* huffmantable.cpp in Sources */,
 				90DC9181215025B2004FCBCF /* component.cpp in Sources */,
@@ -408,6 +402,7 @@
 				90DC916721502544004FCBCF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

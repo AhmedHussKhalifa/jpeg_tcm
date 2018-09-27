@@ -70,9 +70,9 @@ public:
     vector<vector <int> > tCoeff_Y;
     vector<vector <int> > tCoeff_Cb;
     vector<vector <int> > tCoeff_Cr;
-
-	// Vector of the DCT coefficient categorized by the AC indexes
-	vector<vector <int> > tCoeff_Y_AC;
+    
+    // Vector of the DCT coefficient categorized by the AC indexes
+    vector<vector <int> > tCoeff_Y_AC;
     
     // convert JPG to BMP file; must be called after your create the jpeg decoder
     int convert_jpg_to_bmp(const std::string output_bmp_filename);
@@ -132,7 +132,7 @@ public:
     // Internal Pointer use for colorspace conversion, do not modify it !!! (it points to the m_rgb pointer)
     unsigned char*		m_colourspace; // August 14: TODO: to be removed
     
-      
+    
     unsigned char precision; // Precison of elements (8 or 12 bits) // not used
     
     // Data needed for decoding
@@ -144,9 +144,10 @@ public:
     bool endOfFile;
     int previousDC[ETF_FORMAT_MAX_COMPONENTS];
     
-	bool progressive_Huff_Format = false; // is progressive_Huff_Format
+    bool progressive_Huff_Format = false; // is progressive_Huff_Format
     bool losslessFormat; // is lossless format or lossy
     int zigZagStart, zigZagEnd;
+    uint_8 ssa;
     int approximationH, approximationL;
     int *scanLineCache[ETF_FORMAT_MAX_COMPONENTS];
     
@@ -159,12 +160,12 @@ public:
     int maxSample; // maximum sample value (2^bit_precision - 1)
     bool hasSubSampling;
     int currentBlockHFactor[ETF_FORMAT_MAX_COMPONENTS], currentBlockVFactor[ETF_FORMAT_MAX_COMPONENTS];
-
+    
     // indices of next block for DCT blocks
     unsigned int currentX_dct[ETF_FORMAT_MAX_COMPONENTS]; // Coordinates for next block
     unsigned int currentY_dct[ETF_FORMAT_MAX_COMPONENTS];
     int currentBlockHFactor_dct[ETF_FORMAT_MAX_COMPONENTS], currentBlockVFactor_dct[ETF_FORMAT_MAX_COMPONENTS];
-
+    
     
     // Data used by IDCT method
     double cosine[106];
@@ -172,19 +173,22 @@ public:
     
     // information about the picture
     uint_16 jpegImageWidth, jpegImageHeight;
-	int upscale_height;
-	int upscale_width;
-	int mcu_width, mcu_height;
+    int upscale_height;
+    int upscale_width;
+    int mcu_width, mcu_height;
     int mcu_cols, mcu_rows;
-
-	// CHANGES FOR PROGRESSIVE MODE -------------------
-	uint_8  numberOfComponents;
-	vector<uint_8> componentID;
-	int counter_progressive = 0;
-	vector<vector <int> > data_DCT;
-
-	int total_block_Y, total_block_C;
-	int count_block_Y, count_block_Cb, count_block_Cr;
+    
+    // CHANGES FOR PROGRESSIVE MODE -------------------
+    uint_8  numberOfComponents;
+    vector<uint_8> componentID;
+    int counter_progressive = 0;
+    vector<vector <int> > data_DCT;
+    int EOB_run = 0;
+    int counter_scan_blockidx = 0;
+    void final_process_progressive();
+    
+    int total_block_Y, total_block_C;
+    int count_block_Y, count_block_Cb, count_block_Cr;
     int jpegImageSamplePrecision; // 8 or 12 bits (frame header)
     
     
@@ -193,7 +197,7 @@ public:
     
     // parse segment
     int parseSeg();
-
+    
     uint_16 readFrameHeader(uint_16 headerLengthFromBitStream);
     uint_16 readHuffmanTables(uint_16 tableLengthFromBitStream);
     void readArithmeticCoding(); // TODO: incomplete
@@ -206,28 +210,30 @@ public:
     void deleteRawImagePointers();
     void deleteDCTComponentPointers();
     void deleteRawPictureBufferPointers();
-	
-	// TODO: Support intervleaving order of YCbCr pixels
+    
+    // TODO: Support intervleaving order of YCbCr pixels
     void readImageEntryPoint();
     void readProgressiveImageEntryPoint();
     void decode_mcu(int componentWidth, int componentHeight, int currentX, int currentY);
-	// FOR PROGRESSIVE
-	void decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID);
-
+    // FOR PROGRESSIVE
+    void decode_mcu_progressive(int componentWidth, int componentHeight, int currentX, int currentY, vector<uint_8> componentID);
+    
+    void process_huffmann_data_unit_progressive(int currentComponent, int currentX, int currentY);
     void process_huffmann_data_unit(int currentComponent, int currentX, int currentY);
     // Decodes single 8x8 block
     void decode_single_block(int offset, int stride, int currentComponent, uint_8* outputBuf,
-		int currentX = 0, int currentY = 0);
+                             int currentX = 0, int currentY = 0);
     
     
     // initializes the necessary positions and buffers for storing the Y component
     void initPositionsBuffersForPictureBuffer();
+    void initCurrentPosition();
     // adds single 8x8 block to the Y picture buffer
     void addBlockSubsampling(int dataBlock[8][8], int currentComponent = COMPONENT_Y);
     
     
     void addtCoeffBlock(int dataBlock[8][8], int currentComponent = COMPONENT_Y, int currentX = 0, int currentY = 0);
-
+    
     void reshapeArrayInto8x8(int outArray[8][8], const int inArray[64]);
     
     bool is_exist_in_huffman_codes(int code, int codeLength, int currentComponent, int& decodedValue, bool is_dc = true);
@@ -256,17 +262,17 @@ public:
     
     // image transpose
     void transpose(int outMatrix[8][8], const int inMatrix[8][8]);
-        
+    
     // TODO: Speed up IDCT with look up tables using the "cosines" instance variables
     // idct functions:
     void perform_idct(int outBlock[8][8], const int inBlock[8][8]);
     int func(int x, int y, const int block[8][8]);
     float C(int u);
     
-    // decoding functions from the other source  
+    // decoding functions from the other source
     void IDCT (int block8x8[8][8], int block2[8][8]);
     void multiplyWithQuantizationTable(int dataBlock[8][8], int currentComponent);
-   
+    
     
     
     // Reading bits uitilities (declare them inline for speed purposes)
@@ -424,19 +430,19 @@ public:
     void dumpDecodedBlockInDecimal(int val[8][8]);
     void dumpQuantizationTable(int currentComponent);
     
-	inline static uint bit_count(int temp1)
-	{
-		if (temp1 < 0) {
-			temp1 = -temp1;
-		}
-
-		uint nbits = 0;
-		while (temp1) {
-			nbits++;
-			temp1 >>= 1;
-		}
-		return nbits;
-	}
+    inline static uint bit_count(int temp1)
+    {
+        if (temp1 < 0) {
+            temp1 = -temp1;
+        }
+        
+        uint nbits = 0;
+        while (temp1) {
+            nbits++;
+            temp1 >>= 1;
+        }
+        return nbits;
+    }
     
 };
 
