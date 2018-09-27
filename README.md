@@ -19,3 +19,4 @@ Created: September 2018
 - 2018-09-25:RGB-BMP Picture shown bug fixed
 - 2018-09-26: Progressive Encoder Standard Default Huffman Table Built
 - 2018-09-26: Support multiple compilation modes and added code for Huffman tables and SOF writing in the progressive mode (trying to write as sequential)
+- 2018-09-27: Progressive Encoder as Sequential with Standard Default Huffman Table Built Done
