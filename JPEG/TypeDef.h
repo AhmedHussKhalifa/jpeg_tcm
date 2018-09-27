@@ -51,7 +51,7 @@
 
 
 #define IS_ONLY_TCM                       1
-#define TCM_OUTLIER_THRESHOLD             8
+#define TCM_OUTLIER_THRESHOLD             5
 
 
 

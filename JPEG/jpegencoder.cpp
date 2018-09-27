@@ -935,7 +935,6 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 
 	if (progressive_Huff_Format) {
 		write_baseline_dct_info(file);
-
 		build_default_huffman_tables();
 		write_default_huffman_tables(file);
 	}
@@ -969,6 +968,7 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 
 	// SOS marker
 	case 0xFFDA:
+		/*int co = jpegDecoder->counter_progressive*/
 		return 0; // done
 	default:
 		add_byte_to_jpeg_enc_buffer(marker, file);
@@ -1651,17 +1651,17 @@ void jpeg_encoder::build_default_huffman_tables() {
 		table = new HuffmanTable();
 		if (huffman_table_counter < 2) { // DC condition, either Y or C
 			// initialization
-			if (huffman_table_counter == 0) table->tableClass = 0;
-			else table->tableClass = 1; // tableClass 0 is for DC
-			table->tableID = 0;
-			table->tableSegmentLengthFromBitstream = 0x43;
+			if (huffman_table_counter == 0) table->tableID = 0;
+			else table->tableID = 1; // tableClass 0 is for DC
+			table->tableClass = 0;
+			table->tableSegmentLengthFromBitstream = 0x1F;
 			default_huffmanTables.push_back(table);
 		}
 		else { // AC condition, either Y or C
-			if (huffman_table_counter == 2) table->tableClass = 0;
-			else table->tableClass = 1; // tableClass 1 is for AC
-			table->tableID = 1;
-			table->tableSegmentLengthFromBitstream = 0x43;
+			if (huffman_table_counter == 2) table->tableID = 0;
+			else table->tableID = 1; // tableClass 1 is for AC
+			table->tableClass = 1;
+			table->tableSegmentLengthFromBitstream = 0xB5;
 			default_huffmanTables.push_back(table);
 		}
 
@@ -1725,7 +1725,7 @@ bool jpeg_encoder::savePicture() {
 	uint_8 ** chrominanceCr = jpegDecoder->m_CrPicture_buffer;
 
 	// NEW to TCM: Apply TCM
-	// perform_TCM();
+	//perform_TCM();
 
 	perform_fdct(luminance, luminanceZigZagArray, quantization_table_write_process_luminance.quantizationTableData, COMPONENT_Y);
 	int numberofComponent = jpegDecoder->components.size();

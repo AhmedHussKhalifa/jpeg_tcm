@@ -1,5 +1,4 @@
-﻿  JPEG.cpp
-  jpegencoder.cpp
+﻿  jpegencoder.cpp
 c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(25): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
 c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(66): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
 c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(72): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
@@ -36,8 +35,9 @@ c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_t
 c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(872): warning C4267: 'argument': conversion from 'size_t' to 'uint_8', possible loss of data
 c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpegencoder.cpp(1731): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
   Generating code
-  1 of 1185 functions (<0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\operation.h(333): warning C4715: 'smoothing': not all control paths return a value
+  122 of 1243 functions ( 9.8%) were compiled, the rest were copied from previous compilation.
+    6 functions were new in current compilation
+    17 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   JPEG.vcxproj -> C:\Users\y77jiang\OneDrive - University of Waterloo\5e. TCM-Inception C++\jpeg_tcm\x64\Release\JPEG.exe
