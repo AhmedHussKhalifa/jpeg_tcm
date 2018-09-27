@@ -1651,14 +1651,14 @@ void jpeg_encoder::build_default_huffman_tables() {
         if (huffman_table_counter < 2) { // DC condition, either Y or C
             // initialization
             if (huffman_table_counter == 0) table->tableID = 0;
-            else table->tableID = 1; // tableClass 0 is for DC
+            else table->tableID = 1; // tableID 0 is for DC
             table->tableClass = 0;
             table->tableSegmentLengthFromBitstream = 0x1F;
             default_huffmanTables.push_back(table);
         }
         else { // AC condition, either Y or C
             if (huffman_table_counter == 2) table->tableID = 0;
-            else table->tableID = 1; // tableClass 1 is for AC
+            else table->tableID = 1; // tableID 1 is for AC
             table->tableClass = 1;
             table->tableSegmentLengthFromBitstream = 0xB5;
             default_huffmanTables.push_back(table);
