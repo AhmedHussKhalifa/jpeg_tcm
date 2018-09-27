@@ -16,7 +16,7 @@ Created: September 2018
 - 2018-09-20: Progressive: All Scan Done for goose_org.jpeg, Huffman Table overwritten, Dequantiz not done
 - 2018-09-23: Progressive: All Scan done, Data Read properly, but one tcoeff reason unknown, Huffman Table overwritten
 - 2018-09-24: Tested on Multiple SOI (0xFFD8): Success, Progressive Decoder Clean up, Y Component Shown in Release Mode of VS2017 but not Debug Mode
-- 2018-09-25:RGB-BMP Picture shown bug fixed
+- 2018-09-25: RGB-BMP Picture shown bug fixed
 - 2018-09-26: Progressive Encoder Standard Default Huffman Table Built
 - 2018-09-26: Support multiple compilation modes and added code for Huffman tables and SOF writing in the progressive mode (trying to write as sequential)
 - 2018-09-27: Progressive Encoder as Sequential with Standard Default Huffman Table Built Done
