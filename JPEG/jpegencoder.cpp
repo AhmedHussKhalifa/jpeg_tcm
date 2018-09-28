@@ -1725,7 +1725,7 @@ bool jpeg_encoder::savePicture() {
 	uint_8 ** chrominanceCr = jpegDecoder->m_CrPicture_buffer;
 
 	// NEW to TCM: Apply TCM
-	//perform_TCM();
+	 // perform_TCM();
 
 	perform_fdct(luminance, luminanceZigZagArray, quantization_table_write_process_luminance.quantizationTableData, COMPONENT_Y);
 	int numberofComponent = jpegDecoder->components.size();

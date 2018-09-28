@@ -172,10 +172,8 @@ int jpeg_decoder::parseSeg()
             
             // End of Image (EOI)
         case 0xFFD9:
-			
-			
-			cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
-			cout << components.size() << endl;
+			// cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
+			// cout << components.size() << endl;
 			
 			// Progressive processing need after storing tcoeff: Dequantization, Inverse Zigzag, IDCT & Add block subsampling
 			if (progressive_Huff_Format) {
