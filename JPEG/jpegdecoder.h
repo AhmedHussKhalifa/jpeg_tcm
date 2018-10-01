@@ -181,7 +181,9 @@ public:
 	// CHANGES FOR PROGRESSIVE MODE -------------------
 	uint_8  numberOfComponents;
 	vector<uint_8> componentID;
-	int counter_progressive = 0;
+	int counter_SOS = 0;
+	int counter_SOI = 0;
+	int application_size = 0;
 	vector<vector <int> > data_DCT;
 	int EOB_run = 0;
 	int counter_scan_blockidx = 0;

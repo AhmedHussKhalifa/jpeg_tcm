@@ -58,6 +58,8 @@ public:
 	HuffmanTable* defaultTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
 	HuffmanTable* defaultTablesAC[ETF_FORMAT_MAX_COMPONENTS];
 
+	int counter_FFD8, counter_FFDA, counter_FFEX;
+
 private:
     
 

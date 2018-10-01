@@ -908,6 +908,8 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 	string orginal_fileName = jpegDecoder->jpeg_filename;
 	FILE * fp_enc = fopen(orginal_fileName.c_str(), "rb");
 
+	counter_FFEX = jpegDecoder->application_size + 2;
+
 	if (fp_enc) {
 		while (parseSegEnc(fp_enc, file));
 		fclose(fp_enc);
@@ -961,17 +963,29 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 #endif
 
 	switch (real_marker) {
-
-	// For progressive we stop here to deal with it with our default sequential writing
+		// For progressive we stop here to deal with it with our default sequential writing
 	case 0xFFC2:
-		return 0;
-
+		if (counter_FFEX > 0) {
+			add_byte_to_jpeg_enc_buffer(marker, file);
+			counter_FFEX--;
+			break;
+		}
+		else {
+			return 0;
+		}
 	// SOS marker
 	case 0xFFDA:
-		/*int co = jpegDecoder->counter_progressive*/
-		return 0; // done
+		if (counter_FFEX > 0) {
+			add_byte_to_jpeg_enc_buffer(marker, file);
+			counter_FFEX--;
+			break;
+		}
+		else {
+			return 0;
+		}
 	default:
 		add_byte_to_jpeg_enc_buffer(marker, file);
+		counter_FFEX--;
 		break;
 	}
 	return JPEG_SEG_OK;
