@@ -10,8 +10,8 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
-#define PRINT_HUFFMAN_TABLE              1
-#define PRINT_QUANTIZATION_TABLE         0
+#define PRINT_HUFFMAN_TABLE              0
+#define PRINT_QUANTIZATION_TABLE         1
 #define PRINT_FRAME_HEADER_SOF           1
 #define PRINT_SOS                        1
 #define PRINT_BLOCK_PROGRESS             0
@@ -49,9 +49,10 @@
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
 
-
+#define QFACTOR                          10
+#define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
-#define TCM_OUTLIER_THRESHOLD             1
+#define TCM_OUTLIER_THRESHOLD             0
 
 
 

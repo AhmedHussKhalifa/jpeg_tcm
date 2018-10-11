@@ -42,7 +42,7 @@ public:
 
 	// NEW to TCM: result array after applying TCM
 	vector<double> yc_array;
-	vector<int> count_outlier_list;
+	vector<int> count_outlier_list, count_outlier_list_sort;
 
     // jpeg decoder
     jpeg_decoder* jpegDecoder;
@@ -58,8 +58,8 @@ public:
 	HuffmanTable* defaultTablesDC[ETF_FORMAT_MAX_COMPONENTS]; // from format.h
 	HuffmanTable* defaultTablesAC[ETF_FORMAT_MAX_COMPONENTS];
 
-	int counter_FFD8, counter_FFDA, counter_FFEX;
-
+	int counter_FFEX;
+	int counter_FFDB = 0;
 private:
     
 

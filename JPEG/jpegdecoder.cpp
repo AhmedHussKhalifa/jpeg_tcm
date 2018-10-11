@@ -168,7 +168,6 @@ int jpeg_decoder::parseSeg()
             // nothing to advance the file position
             // Start of Image (SOI)
         case 0xFFD8:
-			counter_SOI++;
             break;
             
             // End of Image (EOI)
@@ -237,7 +236,7 @@ int jpeg_decoder::parseSeg()
             // of the file less the two-byte EOI segment
         case 0xFFDA: // SOS = Start Of Scan
 			// cout << ftell(fp) << endl;
-			counter_SOS++;
+			// counter_SOS++;
             size = READ_WORD();
             if (readScanHeader(size) != size) {
                 cout<< "Unexpected end of SOS segment" << endl;
@@ -421,7 +420,7 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
         sizeOfElements  = tableOptions >> 4;     // Left most 4 bits of the byte
         tableIdentifier = tableOptions & 0x0F;   // Right most 4 bits of the byte
         
-        QuantizationTable qTable(false, false);
+        QuantizationTable qTable(false, false, -1);
         qTable.tableID = tableIdentifier;
 		qTable.tableLength = tableLengthFromBitStream;
         
@@ -1896,6 +1895,34 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
         }        
         myfile.close();
     }
+#endif 
+
+#if DEBUGLEVEL > 50
+	//    // TODO: remove FANKOOSH
+	static int fankoosh = 0;
+	if (currentComponent == COMPONENT_Y) {
+		fankoosh++;
+		ofstream myfile;
+		std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/dataset/";
+		std::string output_csv_name = path_to_files + "goose_Y_dec.csv";
+		myfile.open(output_csv_name, std::ofstream::out | std::ofstream::app);
+
+		std::stringstream oss;
+		std::size_t found = output_csv_name.find_last_of(".");
+		std::string path_with_name = output_csv_name.substr(0, found);
+		found = output_csv_name.find_last_of("/\\");
+		std::string name_file_only = path_with_name.substr(found + 1);
+
+		for (int i = 0; i < 8; ++i) {
+			for (int j = 0; j < 8; ++j) {
+				if(!(i==0 && j ==0))
+					myfile << dataReshapedInto8x8[j][i] << ",";
+			}
+		}
+
+		myfile << "\n";
+		myfile.close();
+	}
 #endif 
 
 	// If sequential, process firsly; if progressive, save and process later

@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
-
+#include <algorithm>
 
 using std::vector;
 
@@ -49,7 +49,7 @@ public:
 	    lambda = c - Yc * (1.0 - 1.0/(1.0 - exp(-Yc/lambda_old)) ) ;
 	    
 	    { int k;
-	        for(k=0;k<5;k++)
+	        for(k=0;k<10;k++)
 	        {
 	            lambda_old = lambda ;
 	            
@@ -227,13 +227,35 @@ public:
 
 
 	static void count_outliers(const vector<double> yc_array, const int total_block, const vector<vector<int>> tCoeff_Y_AC, vector<int>& count_outlier_list ) {
+
+		// Attempt of Variable d(shift) according to the magnitude of Yc
+		/*vector<int> shift;
+		vector<int> move;
+		for (int ac_coeff = 1; ac_coeff < yc_array.size() - 1; ++ac_coeff) {
+			for (int blk_index = 0; blk_index < total_block; ++blk_index) {	
+				move.push_back(abs(tCoeff_Y_AC[ac_coeff][blk_index] - yc_array.at(ac_coeff)));
+			}
+			sort(move.begin(), move.end());
+			shift.push_back(move[62]);
+			move.clear();
+		}*/
+
 		for (int blk_index = 0; blk_index < total_block; ++blk_index) {
-			
+			/*vector<int> move;
+			for (int ac_coeff = 1; ac_coeff <= yc_array.size() - 1; ++ac_coeff) {
+				move.push_back(abs(tCoeff_Y_AC[ac_coeff][blk_index] - yc_array.at(ac_coeff)));
+			}
+			sort(move.begin(), move.end());
+			int shift= move[61];
+			move.clear();
+			*/
+
 			int outlier_flag = 0;
+			int shift = 30;
 
 			// Compare with yc score with accure block AC value and count in outlier_flag and store in the count_outlier_list
-			for (int ac_coeff = 1; ac_coeff < yc_array.size()-1; ++ac_coeff) {
-				if (yc_array.at(ac_coeff) < tCoeff_Y_AC[ac_coeff][blk_index] || -yc_array.at(ac_coeff) > tCoeff_Y_AC[ac_coeff][blk_index]) {
+			for (int ac_coeff = 1; ac_coeff <= yc_array.size()-1; ++ac_coeff) {
+				if (yc_array.at(ac_coeff)+ shift < tCoeff_Y_AC[ac_coeff][blk_index] || -yc_array.at(ac_coeff) - shift > tCoeff_Y_AC[ac_coeff][blk_index]) {
 					outlier_flag++;
 				}
 			}

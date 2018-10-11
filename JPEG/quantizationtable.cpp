@@ -10,11 +10,19 @@
 #include "quantizationtable.h"
 
 
-QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):tableID(-1), tableLength(-1){
-    
+QuantizationTable::QuantizationTable(bool writeFileProcess,bool component, int Q):tableID(-1), tableLength(-1){
+	
     if(writeFileProcess==true && component==true) { //Luminance quantization table
-        
-        /*quantizationTableData[0][0]=16;
+		/* Standard 
+		* 16 11 10 16 24  40  51  61
+		* 12 12 14 19 26  58  60  55
+		* 14 13 16 24 40  57  69  56
+		* 14 17 22 29 51  87  80  62
+		* 18 22 37 56 68  109 103 77
+		* 24 35 55 64 81  104 113 92
+		* 49 64 78 87 103 121 120 101
+		* 72 92 95 98 112 100 103 99*/
+         quantizationTableData[0][0]=16;
          quantizationTableData[0][1]=11;
          quantizationTableData[0][2]=10;
          quantizationTableData[0][3]=16;
@@ -77,8 +85,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
          quantizationTableData[7][4]=112;
          quantizationTableData[7][5]=100;
          quantizationTableData[7][6]=103;
-         quantizationTableData[7][7]=99;*/
-        
+         quantizationTableData[7][7]=99;
         
         /*
          1   1   1   1   1   1   1   1
@@ -91,7 +98,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
          DQT, Row #7:   1   1   2   2   3   3   3   3
          */
         
-        quantizationTableData[0][0]=1;
+        /*quantizationTableData[0][0]=1;
         quantizationTableData[0][1]=1;
         quantizationTableData[0][2]=1;
         quantizationTableData[0][3]=1;
@@ -161,12 +168,12 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
         quantizationTableData[7][4]=3;
         quantizationTableData[7][5]=3;
         quantizationTableData[7][6]=3;
-        quantizationTableData[7][7]=3;
+        quantizationTableData[7][7]=3;*/
     }
     else if(writeFileProcess==true && component==false) { // Chrominance quantization table
-        
-        
-        /*17	18	24	47	99	99	99	99
+ 
+       /* Standard
+	     17 18	24	47	99	99	99	99
          18	21	26	66	99	99	99	99
          24	26	56	99	99	99	99	99
          47	66	99	99	99	99	99	99
@@ -174,7 +181,8 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
          99	99	99	99	99	99	99	99
          99	99	99	99	99	99	99	99
          99	99	99	99	99	99	99	99*/
-        /*quantizationTableData[0][0]=18;
+
+         quantizationTableData[0][0]=17;
          quantizationTableData[0][1]=18;
          quantizationTableData[0][2]=24;
          quantizationTableData[0][3]=47;
@@ -237,7 +245,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
          quantizationTableData[7][4]=99;
          quantizationTableData[7][5]=99;
          quantizationTableData[7][6]=99;
-         quantizationTableData[7][7]=99;*/
+         quantizationTableData[7][7]=99;
         
         /*
          DQT, Row #0:   1   1   1   2   2   3   3   3
@@ -249,7 +257,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
          DQT, Row #6:   3   3   3   3   3   3   3   3
          DQT, Row #7:   3   3   3   3   3   3   3   3
          */
-        quantizationTableData[0][0]=1;
+        /*quantizationTableData[0][0]=1;
         quantizationTableData[0][1]=1;
         quantizationTableData[0][2]=1;
         quantizationTableData[0][3]=2;
@@ -319,22 +327,30 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):table
         quantizationTableData[7][4]=3;
         quantizationTableData[7][5]=3;
         quantizationTableData[7][6]=3;
-        quantizationTableData[7][7]=3;
+        quantizationTableData[7][7]=3;*/
         
         
         
     }
+	
+	// Processing of quality factor
+	if (Q >= 1) {
+		int S;
+		if (Q < 50)
+			S = 5000 / Q;
+		else
+			S = 200 - 2 * Q;
+
+		for (int i = 0; i < 8; ++i) {
+			for (int j = 0; j < 8; ++j) {
+				quantizationTableData[i][j] = floor((S*quantizationTableData[i][j] + 50) / 100);
+				if (quantizationTableData[i][j] == 0) quantizationTableData[i][j] = 1;
+			}
+		}
+	}
     
 }
 
 
 //Quantization table
-/*
- *16 11 10 16 24  40  51  61
- *12 12 14 19 26  58  60  55
- * 14 13 16 24 40  57  69  56
- * 14 17 22 29 51  87  80  62
- * 18 22 37 56 68  109 103 77
- * 24 35 55 64 81  104 113 92
- * 49 64 78 87 103 121 120 101
- * 72 92 95 98 112 100 103 99*/
+

@@ -21,7 +21,7 @@ double distChiSq (int X[], int Y[]){
 	for(int i = 0; i < n; i++){
 		upper = X[i] - Y[i];
 		bottom = X[i] + Y[i];
-		ele = pow(s,2)/d;
+		ele = pow(upper,2)/ bottom;
 
 		D += ele;
 	}
@@ -30,13 +30,15 @@ double distChiSq (int X[], int Y[]){
 	return D;
 }
 
-void imageHist(int img2D[][], int& hist[]){
+void imageHist(vector<vector <int> > img2D, vector<int>& hist){
 	// Change 2D image array to a 1D array for easy count purpose
 	// Size of the 2D image (row*column)
-	int row = sizeof (img2D) / sizeof(img2D[0]);
-	int col = sizeof(img2D[0]) / sizeof(img2D[0][0]);
+	int row = img2D.size();
+	int col = img2D[0].size();
 
 	// Initialization of img 1D array
+
+
 	int img[row*col];
 	for(int i = 0; i < row; ++i)
     	for(int j = 0; j < col; ++j)
@@ -50,7 +52,7 @@ void imageHist(int img2D[][], int& hist[]){
 
     for(int i = 0; i < size_img; i++){
     	if (img[i] == place){
-    		hist[place]++
+			hist[place]++;
     	}else{
     		place = img[i];
     		hist[place]++;
