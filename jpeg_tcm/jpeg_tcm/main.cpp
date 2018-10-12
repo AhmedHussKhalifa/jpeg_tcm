@@ -107,9 +107,35 @@ int main(int argc, const char * argv[]) {
 //    test.write_yuv_from_jpg_in_yuv(pF);
 
     // Encoding:
-    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
-    jpeg_encoder enc(&test, encoded_filename);
-    enc.savePicture();
+//    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
+//    jpeg_encoder enc(&test, encoded_filename);
+//    enc.savePicture();
+    
+    
+    // Quality factor experiment:
+    ////////////////////////////////////////////////////////
+    // Hossam: Save the input fileName
+    std::string encoded_filename = filename;
+    
+    ////// String Processing -- Get the file Name
+    size_t found = encoded_filename.find_last_of("/\\");
+    std::string filename_first_token = encoded_filename.substr(found+1);
+    found = filename_first_token.find_first_of(".");
+    std::string filename_second_token = filename_first_token.substr(0, found);
+    
+    // Encoded output name
+    encoded_filename = path_to_files + filename_second_token + "-QF-" + "_" + to_string(QFACTOR) + filename_first_token.substr(found);
+    
+    
+    cout << "encoded Output: " << encoded_filename << endl;
+//    jpeg_encoder enc(&test, encoded_filename);
+//    enc.savePicture();
+
+    /////
+    // To account for names with _
+//    found = g_input_FileName.find_first_of("_");
+//    if(found != std::string::npos)
+//        g_input_FileName = g_input_FileName.substr(0, found);
     
 //
 //    FILE* pFile;
