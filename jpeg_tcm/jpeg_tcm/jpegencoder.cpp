@@ -10,7 +10,7 @@
 #include "jpegencoder.h"
 #include <iostream>
 #include <vector>
-
+#include <algorithm>
 #include "operation.h"
 
 
@@ -71,23 +71,42 @@ jpeg_encoder::jpeg_encoder(jpeg_decoder* processed_jpeg_decoder, std::string out
 void jpeg_encoder::copy_qTables() {
     
     int comp_size = static_cast<int>(jpegDecoder->components.size());
-    
     // Copy the quantization tables
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             
             QuantizationTable * from = jpegDecoder->components[COMPONENT_Y].componentQuantizationTable;
             quantization_table_write_process_luminance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
+            if (QFACTOR >= 1) {
+                int S;
+                if (QFACTOR < 50)
+                    S = floor(5000 / QFACTOR);
+                else
+                    S = 200 - 2 * QFACTOR;
+                
+                quantization_table_write_process_luminance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_luminance.quantizationTableData[i][j] + 50) / 100);
+                if (quantization_table_write_process_luminance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
+            }
+            
             
             // TODO: check if you only the QTable for Cb and not Cr
             if (comp_size > 1) {
                 from = jpegDecoder->components[COMPONENT_Cb].componentQuantizationTable;
                 quantization_table_write_process_chrominance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
+                if (QFACTOR >= 1) {
+                    int S;
+                    if (QFACTOR < 50)
+                        S = floor(5000 / QFACTOR);
+                    else
+                        S = 200 - 2 * QFACTOR;
+                    
+                    quantization_table_write_process_chrominance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_chrominance.quantizationTableData[i][j] + 50) / 100);
+                    if (quantization_table_write_process_chrominance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
+                }
             }
             
         } // end inner
     } // end outer
-    
 } // end copy_qTables
 
 // NEW to TCM: Apply TCM
@@ -106,6 +125,8 @@ void::jpeg_encoder::perform_TCM() {
         yc_array.at(i) = yc;
     }
     
+    
+    
     // TODO: remove this: visual output of yc score
 #if DEBUGLEVEL > 20
     for (int i = 0; i < 8; ++i) {
@@ -118,9 +139,19 @@ void::jpeg_encoder::perform_TCM() {
     
     tcm::count_outliers(yc_array, total_block, jpegDecoder->tCoeff_Y_AC, count_outlier_list);
     
+    //for (int i = 0; i < 8; i++) {
+    //	for (int j = 0; j < 8; j++) {
+    //		cout << jpegDecoder->tCoeff_Y_AC[i * 8 + j][3200] << " ";
+    //		if (j == 7) cout << endl;
+    //	}
+    //}
+    
     // counter for wiped blocks
     int wiped_counter = 0;
+    int counter_wiped_AC = 0;
     
+    count_outlier_list_sort = count_outlier_list;
+    sort(count_outlier_list_sort.begin(), count_outlier_list_sort.end());
     int min = count_outlier_list.at(0);
     int max = -1;
     for (int i = 0; i < count_outlier_list.size(); ++i) {
@@ -132,7 +163,11 @@ void::jpeg_encoder::perform_TCM() {
             max = count_outlier_list.at(i);
         }
     }
-    cout << "   " << max << "   " << min;
+    cout << "Max OBF: " << max << "; Min OBF: " << min<<endl;
+    
+    // cout << count_outlier_list_sort[floor(count_outlier_list_sort.size()*0.70)];
+    
+    // Beform Doing TCM Record the histrogram of tCoeff_Y for reference
     
     // _______________________________APPLICATION OF TCM _____________________________________
     int currentComponent = COMPONENT_Y;
@@ -157,7 +192,6 @@ void::jpeg_encoder::perform_TCM() {
         int currentBlockVFactor = 0;
         int smooth_value = 0;
         
-        
         // loop on the entire picture
         for (uint i = 0; i < comp_height; i += 8) {
             for (uint j = 0; j < comp_width; j += 8) {
@@ -165,15 +199,15 @@ void::jpeg_encoder::perform_TCM() {
                 int block_idx = (currentX / 8) + (currentY / 8) * (width / 8);
                 
                 //wiped counter
-                /*if (count_outlier_list.at(block_idx) <= TCM_OUTLIER_THRESHOLD) {
-                 wiped_counter++;
-                 }*/
+                if (count_outlier_list.at(block_idx) <= count_outlier_list_sort[floor(count_outlier_list_sort.size()*0.70)]) { //TCM_OUTLIER_THRESHOLD
+                    wiped_counter++;
+                }
                 
                 //if (block_idx >=0) {
                 //	cout << block_idx << endl;
                 //	//cout << &jpegDecoder->m_YPicture_buffer[383][511];
                 //}
-                smooth_value = smoothing(block_idx, count_outlier_list, height, width, currentComponent, jpegDecoder->m_YPicture_buffer, jpegDecoder->m_CbPicture_buffer, jpegDecoder->m_CrPicture_buffer);
+                //smooth_value = smoothing(block_idx, count_outlier_list, height, width, currentComponent, jpegDecoder->m_YPicture_buffer, jpegDecoder->m_CbPicture_buffer, jpegDecoder->m_CrPicture_buffer);
                 uint y;
                 for (y = 0; y < 8; ++y) {
                     bool done = false;
@@ -189,14 +223,13 @@ void::jpeg_encoder::perform_TCM() {
                         if (currentX + x >= width) break;
                         int realx = currentX + x;
                         
-                        
 #if IS_ONLY_TCM
-                        if (count_outlier_list.at(block_idx) <= TCM_OUTLIER_THRESHOLD) {
-                            //	//cout << &jpegDecoder->m_YPicture_buffer[383][511];
-                            
+                        if (count_outlier_list.at(block_idx) == 0) { //<= TCM_OUTLIER_THRESHOLD
+                            //cout << &jpegDecoder->m_YPicture_buffer[383][511];
                             if (!(x == 0 && y == 0)) {
                                 switch (currentComponent) {
                                     case COMPONENT_Y:
+                                        if (jpegDecoder->tCoeff_Y[picture_y][realx] != 0) counter_wiped_AC++;
                                         jpegDecoder->tCoeff_Y[picture_y][realx] = 0;
                                         break;
                                     case COMPONENT_Cb:
@@ -251,9 +284,9 @@ void::jpeg_encoder::perform_TCM() {
                         //								break;
                         //						}
                         
-                        //if (block_idx == 47) { //|| (block_idx > 50 && block_idx <=94)
-                        //	cout << "position X: " << realx << "  position Y:" << picture_y << endl;
-                        //	jpegDecoder->tCoeff_Y[picture_y][realx] = 0;
+                        //if (currentComponent == 0 && block_idx == 3200) { //|| (block_idx > 50 && block_idx <=94)
+                        //	cout << "position X: " << currentX << "  position Y:" << currentY << endl;
+                        //	jpegDecoder->tCoeff_Y[picture_y][realx] = -128;
                         //}
                     }
                     if (done) break;
@@ -382,6 +415,7 @@ void::jpeg_encoder::perform_TCM() {
         
         
         //cout << "\nNumber of wiped blocks " << wiped_counter << " --- Percentage " << 100.0*(1.0*wiped_counter / total_block) << endl;
+        // cout << "Percentage of Wiped Pixel " << 100.0*counter_wiped_AC/(image_to_export_height*image_to_export_width) << "% " << endl;
         // getchar();
     } // end loop on currentComponent
     
@@ -907,6 +941,9 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
     string orginal_fileName = jpegDecoder->jpeg_filename;
     FILE * fp_enc = fopen(orginal_fileName.c_str(), "rb");
     
+    // counter to check the remaining length of the reserved application header length
+    counter_FFEX = jpegDecoder->application_size + 2;
+    
     if (fp_enc) {
         while (parseSegEnc(fp_enc, file));
         fclose(fp_enc);
@@ -960,17 +997,62 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 #endif
     
     switch (real_marker) {
-            
             // For progressive we stop here to deal with it with our default sequential writing
-        case 0xFFC2:
-            return 0;
             
+#if IS_DEFAULT_QTABLE
+        case 0xFFDB:
+            if (counter_FFEX > 0) {
+                add_byte_to_jpeg_enc_buffer(marker, file);
+                counter_FFEX--;
+                break;
+            }
+            else {
+                if (counter_FFDB == 0) {
+                    // Write the DQT:
+                    emit_DQT(file);
+                    counter_FFDB++;
+                    int counter_FF = 0;
+                    while (1) {
+                        marker = fgetc(fp);
+                        if (marker != 0xFF) continue;
+                        else {
+                            counter_FF++;
+                            if (counter_FF > 1) {
+                                add_byte_to_jpeg_enc_buffer(marker, file);
+                                counter_FFEX--;
+                                break;
+                            }
+                            else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+#endif
+        case 0xFFC2:
+            if (counter_FFEX > 0) {
+                add_byte_to_jpeg_enc_buffer(marker, file);
+                counter_FFEX--;
+                break;
+            }
+            else {
+                return 0;
+            }
             // SOS marker
         case 0xFFDA:
-            /*int co = jpegDecoder->counter_progressive*/
-            return 0; // done
+            if (counter_FFEX > 0) {
+                add_byte_to_jpeg_enc_buffer(marker, file);
+                counter_FFEX--;
+                break;
+            }
+            else {
+                return 0;
+            }
         default:
             add_byte_to_jpeg_enc_buffer(marker, file);
+            counter_FFEX--;
             break;
     }
     return JPEG_SEG_OK;
@@ -1090,7 +1172,8 @@ void jpeg_encoder::emit_DQT(ofstream &file) {
      *    ordering of the DCT coefficients. The quantization elements shall be specified in zig-zag scan order.
      */
     
-    emit_marker(M_DQT, file);
+    //emit_marker(M_DQT, file);
+    add_byte_to_jpeg_enc_buffer(M_DQT, file);
     int comp_size = static_cast<int>(jpegDecoder->components.size());
     
     // Current counter
@@ -1099,22 +1182,24 @@ void jpeg_encoder::emit_DQT(ofstream &file) {
     // Two quantization tables at max for {Y}, {Cb, Cr}
     do
     {
-        QuantizationTable * qTable = jpegDecoder->components[counter].componentQuantizationTable;
-        int tableLength = qTable->tableLength;
-        
+        /*QuantizationTable * qTable = jpegDecoder->components[counter].componentQuantizationTable;
+         int tableLength = qTable->tableLength;
+         */
+        int tableLength = 0x43;
         if (counter == 0) {
-            emit_byte(0, file);
-            emit_byte(tableLength, file);
+            add_byte_to_jpeg_enc_buffer(0, file);
+            add_byte_to_jpeg_enc_buffer(tableLength, file);
         }
-        else if (tableLength <= DQT_LENGTH_WITH_TWO_MARKERS) {
-            emit_marker(M_DQT, file);
-            emit_byte(0, file);
-            emit_byte(tableLength, file);
+        else{
+            add_byte_to_jpeg_enc_buffer(0xFF, file);
+            add_byte_to_jpeg_enc_buffer(M_DQT, file);
+            add_byte_to_jpeg_enc_buffer(0, file);
+            add_byte_to_jpeg_enc_buffer(tableLength, file);
         }
         
         // Write the tableID
         uint_8 tableID = counter;
-        emit_byte(tableID, file);
+        add_byte_to_jpeg_enc_buffer(tableID, file);
         
         // Write the QTable values
         vector <char> qtable_vec;
@@ -1127,7 +1212,7 @@ void jpeg_encoder::emit_DQT(ofstream &file) {
         }
         
         for (int i = 0; i < qtable_vec.size(); ++i) {
-            emit_byte(qtable_vec.at(i), file);
+            add_byte_to_jpeg_enc_buffer(qtable_vec.at(i), file);
         }
         qtable_vec.clear();
         
@@ -1651,14 +1736,14 @@ void jpeg_encoder::build_default_huffman_tables() {
         if (huffman_table_counter < 2) { // DC condition, either Y or C
             // initialization
             if (huffman_table_counter == 0) table->tableID = 0;
-            else table->tableID = 1; // tableID 0 is for DC
+            else table->tableID = 1; // tableClass 0 is for DC
             table->tableClass = 0;
             table->tableSegmentLengthFromBitstream = 0x1F;
             default_huffmanTables.push_back(table);
         }
         else { // AC condition, either Y or C
             if (huffman_table_counter == 2) table->tableID = 0;
-            else table->tableID = 1; // tableID 1 is for AC
+            else table->tableID = 1; // tableClass 1 is for AC
             table->tableClass = 1;
             table->tableSegmentLengthFromBitstream = 0xB5;
             default_huffmanTables.push_back(table);
@@ -1711,7 +1796,9 @@ bool jpeg_encoder::savePicture() {
     }
     
     // Copy the quantization tables
+    //#if !IS_DEFAULT_QTABLE
     copy_qTables();
+    //#endif
     
     //In these arrays I will keep my data after FDCT
     vector<int> luminanceZigZagArray;
@@ -1724,7 +1811,7 @@ bool jpeg_encoder::savePicture() {
     uint_8 ** chrominanceCr = jpegDecoder->m_CrPicture_buffer;
     
     // NEW to TCM: Apply TCM
-    //perform_TCM();
+    // perform_TCM();
     
     perform_fdct(luminance, luminanceZigZagArray, quantization_table_write_process_luminance.quantizationTableData, COMPONENT_Y);
     int numberofComponent = jpegDecoder->components.size();

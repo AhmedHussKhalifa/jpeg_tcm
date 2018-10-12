@@ -26,6 +26,9 @@ using namespace cv;
 
 
 #define RUN_DECODER_FULL  1
+// Flag for whether this run is for multiple picture or not
+#define MULTI_PIC         0
+
 
 
 int main(int argc, const char * argv[]) {
@@ -35,8 +38,8 @@ int main(int argc, const char * argv[]) {
     std::string path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/";
     
     // yes all lena
-//          std::string filename = path_to_files + "Lena.jpg";
-            std::string filename = path_to_files + "Lena_progressive.jpg";
+          std::string filename = path_to_files + "Lena.jpg";
+//            std::string filename = path_to_files + "Lena_progressive.jpg";
     //      std::string filename =  path_to_files + "lena_g.jpg";
     //      std::string filename =  path_to_files + "lenaV.jpg";
     //      std::string filename =  path_to_files + "Lena256.jpg";

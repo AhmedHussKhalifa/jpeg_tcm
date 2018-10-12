@@ -172,10 +172,8 @@ int jpeg_decoder::parseSeg()
             
             // End of Image (EOI)
         case 0xFFD9:
-            
-            
-            cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
-            cout << components.size() << endl;
+            // cout << "Size of TCOFF_Y = " << tCoeff_Y.size() << " x " << tCoeff_Y[0].size() << endl;
+            // cout << components.size() << endl;
             
             // Progressive processing need after storing tcoeff: Dequantization, Inverse Zigzag, IDCT & Add block subsampling
             if (progressive_Huff_Format) {
@@ -238,6 +236,7 @@ int jpeg_decoder::parseSeg()
             // of the file less the two-byte EOI segment
         case 0xFFDA: // SOS = Start Of Scan
             // cout << ftell(fp) << endl;
+            // counter_SOS++;
             size = READ_WORD();
             if (readScanHeader(size) != size) {
                 cout<< "Unexpected end of SOS segment" << endl;
@@ -249,10 +248,33 @@ int jpeg_decoder::parseSeg()
             // Include both sequential and progressive
             readImageEntryPoint();
             //counter for counting the number of scans (i.e. number of 0xFFDA)
-            if (progressive_Huff_Format) counter_progressive++;
+            //if (progressive_Huff_Format)
             break;
             // Any other segment has a length specified at its start,
             // so skip over that many bytes of file
+            
+            // Reserved for application segments
+        case 0xFFE0:
+        case 0xFFE1:
+        case 0xFFE2:
+        case 0xFFE3:
+        case 0xFFE4:
+        case 0xFFE5:
+        case 0xFFE6:
+        case 0xFFE7:
+        case 0xFFE8:
+        case 0xFFE9:
+        case 0xFFEA:
+        case 0xFFEB:
+        case 0xFFEC:
+        case 0xFFED:
+        case 0xFFEE:
+        case 0xFFEF:
+            size = READ_WORD();
+            application_size += size + 2; // Application length
+            fseek(fp, size - 2, SEEK_CUR);
+            break;
+            
             
         default:
             size = READ_WORD();
@@ -1871,6 +1893,34 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
                 myfile << "\n";
             }
         }
+        myfile.close();
+    }
+#endif
+    
+#if DEBUGLEVEL > 50
+    //    // TODO: remove FANKOOSH
+    static int fankoosh = 0;
+    if (currentComponent == COMPONENT_Y) {
+        fankoosh++;
+        ofstream myfile;
+        std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/dataset/";
+        std::string output_csv_name = path_to_files + "goose_Y_dec.csv";
+        myfile.open(output_csv_name, std::ofstream::out | std::ofstream::app);
+        
+        std::stringstream oss;
+        std::size_t found = output_csv_name.find_last_of(".");
+        std::string path_with_name = output_csv_name.substr(0, found);
+        found = output_csv_name.find_last_of("/\\");
+        std::string name_file_only = path_with_name.substr(found + 1);
+        
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                if(!(i==0 && j ==0))
+                    myfile << dataReshapedInto8x8[j][i] << ",";
+            }
+        }
+        
+        myfile << "\n";
         myfile.close();
     }
 #endif
