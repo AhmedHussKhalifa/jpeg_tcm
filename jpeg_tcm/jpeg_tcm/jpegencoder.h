@@ -50,6 +50,7 @@ public:
     // Constructor
     jpeg_encoder(std::string filename);
     jpeg_encoder(jpeg_decoder* input_jpeg_decoder, std::string output_filename);
+    jpeg_encoder(jpeg_decoder* input_jpeg_decoder, std::string output_filename, int quality_factor);
     bool savePicture();
     
     // For Progressive
@@ -60,6 +61,10 @@ public:
     
     int counter_FFEX;
     int counter_FFDB = 0;
+    
+    // quality factor for the encoder (-1 if you don't want to change the table)
+    int quality_factor;
+    
 private:
     
     

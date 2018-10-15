@@ -49,7 +49,7 @@
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
 
-#define QFACTOR                           100
+#define QFACTOR                           10
 #define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
 #define TCM_OUTLIER_THRESHOLD             0

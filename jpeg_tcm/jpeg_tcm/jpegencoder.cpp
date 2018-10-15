@@ -66,7 +66,57 @@ jpeg_encoder::jpeg_encoder(jpeg_decoder* processed_jpeg_decoder, std::string out
     // Set the number of bytes in the buffer to 0
     num_bytes_in_jpeg_enc_write_buffer = 0;
     
+    // Set the quality factor to the default value (-1)
+    quality_factor = -1;
+    
 }
+
+
+jpeg_encoder::jpeg_encoder(jpeg_decoder* processed_jpeg_decoder, std::string output_filename, int input_qf) : quantization_table_write_process_luminance(true, true), quantization_table_write_process_chrominance(true, false) {
+    
+    // set the output file name
+    image_to_export_filename = output_filename;
+    
+    // TODO: that's indeed not safe -- you need to create copy constructor or make it unique_ptr
+    jpegDecoder = processed_jpeg_decoder;
+    
+    // TODO: image width and height must be multiples of 8. If they are not, then we have to set them up
+    
+    
+    // set image with and height:
+    image_to_export_width = processed_jpeg_decoder->get_image_width();
+    image_to_export_height = processed_jpeg_decoder->get_image_height();
+    
+    // Set the upscaled image width and height parameters
+    image_to_export_width_dct = processed_jpeg_decoder->upscale_width;
+    image_to_export_height_dct = processed_jpeg_decoder->upscale_height;
+    
+    
+    // boolean that test whether we padded the input picture
+    if (image_to_export_width_dct != image_to_export_width)  padded_width = true;
+    if (image_to_export_height != image_to_export_height_dct)  padded_height = true;
+    
+    // TODO: remove thiss
+    total_block = image_to_export_width_dct * image_to_export_height_dct / 64;
+    total_block_C = ceil(sqrt(total_block) / 2.0) * ceil(sqrt(total_block) / 2.0);
+    
+    // Set the counts to 0
+    count_block_Y = count_block_Cb = count_block_Cr = 0;
+    // queue reading stuff
+    g_nbits_in_reservoir = 0;
+    // the queue of bits
+    m_bit_buffer = 0;
+    // queue reading stuff
+    m_bits_in = 0;
+    
+    // Set the number of bytes in the buffer to 0
+    num_bytes_in_jpeg_enc_write_buffer = 0;
+    
+    // Set the quality factor
+    quality_factor = input_qf;
+    
+}
+
 
 void jpeg_encoder::copy_qTables() {
     
@@ -80,12 +130,12 @@ void jpeg_encoder::copy_qTables() {
             QuantizationTable * from = jpegDecoder->components[COMPONENT_Y].componentQuantizationTable;
             quantization_table_write_process_luminance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
 #endif
-            if (QFACTOR >= 1) {
+            if (quality_factor >= 1) {
                 int S;
-                if (QFACTOR < 50)
-                    S = floor(5000 / QFACTOR);
+                if (quality_factor < 50)
+                    S = floor(5000 / quality_factor);
                 else
-                    S = 200 - 2 * QFACTOR;
+                    S = 200 - 2 * quality_factor;
                 
                 quantization_table_write_process_luminance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_luminance.quantizationTableData[i][j] + 50) / 100);
                 if (quantization_table_write_process_luminance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
@@ -100,12 +150,12 @@ void jpeg_encoder::copy_qTables() {
                 from = jpegDecoder->components[COMPONENT_Cb].componentQuantizationTable;
                 quantization_table_write_process_chrominance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
 #endif 
-                if (QFACTOR >= 1) {
+                if (quality_factor >= 1) {
                     int S;
-                    if (QFACTOR < 50)
-                        S = floor(5000 / QFACTOR);
+                    if (quality_factor < 50)
+                        S = floor(5000 / quality_factor);
                     else
-                        S = 200 - 2 * QFACTOR;
+                        S = 200 - 2 * quality_factor;
                     
                     quantization_table_write_process_chrominance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_chrominance.quantizationTableData[i][j] + 50) / 100);
                     if (quantization_table_write_process_chrominance.quantizationTableData[i][j] == 0) quantization_table_write_process_chrominance.quantizationTableData[i][j] = 1;

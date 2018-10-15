@@ -55,7 +55,7 @@ int main(int argc, const char * argv[]) {
     //      std::string filename =  path_to_files + "Hossam_Amer.jpg";
     //      std::string filename =  path_to_files + "Yang.jpg";
     //    std::string filename = path_to_files + "goose_org.jpg";
-    		std::string filename = path_to_files + "dog.JPEG";
+//    		std::string filename = path_to_files + "dog.JPEG";
 //            std::string filename = path_to_files + "dog-QF-10.JPEG";
     //		std::string filename = path_to_files + "owl.JPEG";
     //		std::string filename = path_to_files + "ILSVRC2012_val_00000878.JPEG";
@@ -109,36 +109,35 @@ int main(int argc, const char * argv[]) {
 
 #if IS_ENABLE_ENCODER
     // Encoding:
-    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
-    jpeg_encoder enc(&test, encoded_filename);
-    enc.savePicture();
+//    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
+//    jpeg_encoder enc(&test, encoded_filename);
+//    enc.savePicture();
     
     
     // Quality factor experiment:
     ////////////////////////////////////////////////////////
     // Hossam: Save the input fileName
-//    std::string encoded_filename = filename;
-//    
-//    ////// String Processing -- Get the file Name
-//    size_t found = encoded_filename.find_last_of("/\\");
-//    std::string filename_first_token = encoded_filename.substr(found+1);
-//    found = filename_first_token.find_first_of(".");
-//    std::string filename_second_token = filename_first_token.substr(0, found);
-//    
-//    
-//    // for each quality factor
-//    int end_quality_factor = 100;
-////    for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += 10)
-//    for (int quality_factor = 100; quality_factor <= end_quality_factor ; quality_factor += 10)
-//    {
-//        // Encoded output name
-//        std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/";
-//        encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
-//        
-//        cout << "encoded Output: " << encoded_filename << endl;
-//        jpeg_encoder enc(&test, encoded_filename);
-//        enc.savePicture();
-//    }
+    std::string encoded_filename = filename;
+    
+    ////// String Processing -- Get the file Name
+    size_t found = encoded_filename.find_last_of("/\\");
+    std::string filename_first_token = encoded_filename.substr(found+1);
+    found = filename_first_token.find_first_of(".");
+    std::string filename_second_token = filename_first_token.substr(0, found);
+    
+    
+    // for each quality factor
+    int end_quality_factor = 100;
+    for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += 10)
+    {
+        // Encoded output name
+        std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/";
+        encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
+        
+        cout << "encoded Output: " << encoded_filename << endl;
+        jpeg_encoder enc(&test, encoded_filename, quality_factor);
+        enc.savePicture();
+    }
     
 #endif
 
