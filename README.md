@@ -23,3 +23,4 @@ Created: September 2018
 - 2018-09-28: Support Multiple picture processing (decode and encode), utilize with flag "MULTI_PIC"
 - 2018-10-01: Multion SOI (0xFFD8) bug found and fixed, not dog.JPEG/lion_org.jpg can be processed
 - 2018-10-10: Support adjust Picture with Quality Factor (var QFACTOR in Typedef.h, not tested due to VS2017 issue)
+- 2018-10-15: Default huffman table writing is done + Same qTable for QTable experiment is done
