@@ -49,10 +49,17 @@
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
 
-#define QFACTOR                          10
+#define QFACTOR                           100
 #define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
 #define TCM_OUTLIER_THRESHOLD             0
+
+
+// use default huffman tables in the encoder?
+#define IS_ENABLE_USE_DEFAULT_HUFF_TABLES    1
+
+// use Qtable from the input picture in the encoder?
+#define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
 
 
 

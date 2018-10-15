@@ -71,12 +71,15 @@ jpeg_encoder::jpeg_encoder(jpeg_decoder* processed_jpeg_decoder, std::string out
 void jpeg_encoder::copy_qTables() {
     
     int comp_size = static_cast<int>(jpegDecoder->components.size());
-    // Copy the quantization tables
+    
+//    // Copy the quantization tables
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             
+#if IS_ENABLE_USE_QTABLE_FROM_PICTURE
             QuantizationTable * from = jpegDecoder->components[COMPONENT_Y].componentQuantizationTable;
             quantization_table_write_process_luminance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
+#endif
             if (QFACTOR >= 1) {
                 int S;
                 if (QFACTOR < 50)
@@ -86,13 +89,17 @@ void jpeg_encoder::copy_qTables() {
                 
                 quantization_table_write_process_luminance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_luminance.quantizationTableData[i][j] + 50) / 100);
                 if (quantization_table_write_process_luminance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
+                
             }
             
             
             // TODO: check if you only the QTable for Cb and not Cr
             if (comp_size > 1) {
+                
+#if IS_ENABLE_USE_QTABLE_FROM_PICTURE
                 from = jpegDecoder->components[COMPONENT_Cb].componentQuantizationTable;
                 quantization_table_write_process_chrominance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
+#endif 
                 if (QFACTOR >= 1) {
                     int S;
                     if (QFACTOR < 50)
@@ -101,7 +108,7 @@ void jpeg_encoder::copy_qTables() {
                         S = 200 - 2 * QFACTOR;
                     
                     quantization_table_write_process_chrominance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_chrominance.quantizationTableData[i][j] + 50) / 100);
-                    if (quantization_table_write_process_chrominance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
+                    if (quantization_table_write_process_chrominance.quantizationTableData[i][j] == 0) quantization_table_write_process_chrominance.quantizationTableData[i][j] = 1;
                 }
             }
             
@@ -969,11 +976,18 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 #endif
     flush_jpeg_enc_buffer(file);
     
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+    write_baseline_dct_info(file);
+    build_default_huffman_tables();
+    write_default_huffman_tables(file);
+#else
     if (progressive_Huff_Format) {
         write_baseline_dct_info(file);
         build_default_huffman_tables();
         write_default_huffman_tables(file);
     }
+#endif
+    
     
 #endif
     
@@ -1030,6 +1044,11 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
                 }
                 break;
             }
+#endif
+
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+        // default huffman tables in the sequential and progressive modes
+        case 0xFFC0:
 #endif
         case 0xFFC2:
             if (counter_FFEX > 0) {
@@ -1412,6 +1431,19 @@ void jpeg_encoder::emit_sos(ofstream &file) {
         
         // TODO: getters
         uint_8 tableDC, tableAC;
+        
+        
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+        if (i == COMPONENT_Y) {
+            tableDC = default_huffmanTables.at(Y_DC_IDX)->tableID;
+            tableAC = default_huffmanTables.at(Y_AC_IDX)->tableID;
+        }
+        else {
+            tableDC = default_huffmanTables.at(CbCr_DC_IDX)->tableID;
+            tableAC = default_huffmanTables.at(CbCr_AC_IDX)->tableID;
+        }
+        
+#else
         if (!progressive_Huff_Format) {
             // Sequential Mode use original picture Huffman Table
             tableDC = jpegDecoder->componentTablesDC[i]->tableID;
@@ -1428,6 +1460,7 @@ void jpeg_encoder::emit_sos(ofstream &file) {
                 tableAC = default_huffmanTables.at(CbCr_AC_IDX)->tableID;
             }
         }
+#endif
         
         if (i == 0) {
             emit_byte((tableDC << 4) + tableAC, file); // component huffman table (left part is DC, right part is AC)
@@ -1582,7 +1615,16 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
     // (table->code[bit_count(dc_delta)], table->codeLength[bit_count(dc_delta)]
     // 2. Write the signed int bits for the dc_delta itself write(dc_delta, nbits)
     HuffmanTable* dc_hTable;
-    if (!progressive_Huff_Format) {
+
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+    if (currentComponent == COMPONENT_Y) {
+        dc_hTable = default_huffmanTables.at(Y_DC_IDX);
+    }
+    else {
+        dc_hTable = default_huffmanTables.at(CbCr_DC_IDX);
+    }
+#else
+    if (!progressive_Huff_Format ) {
         dc_hTable = jpegDecoder->componentTablesDC[currentComponent];
     }
     else {
@@ -1593,6 +1635,7 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
             dc_hTable = default_huffmanTables.at(CbCr_DC_IDX);
         }
     }
+#endif
     
     const uint nbits = bit_count(dc_delta);
     // put_bits:
@@ -1614,6 +1657,17 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
     
     // Encode AC coefficients:
     HuffmanTable* ac_hTable;
+    
+    
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+    if (currentComponent == COMPONENT_Y) {
+        ac_hTable = default_huffmanTables.at(Y_AC_IDX);
+    }
+    else {
+        ac_hTable = default_huffmanTables.at(CbCr_AC_IDX);
+    }
+#else
+    
     if (!progressive_Huff_Format) {
         ac_hTable = jpegDecoder->componentTablesAC[currentComponent];
     }
@@ -1625,6 +1679,7 @@ void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int Curre
             ac_hTable = default_huffmanTables.at(CbCr_AC_IDX);
         }
     }
+#endif
     
     int run_len = 0;
     
@@ -1791,9 +1846,6 @@ bool jpeg_encoder::savePicture() {
     // Identify whether this is a progressive encoder or not
     progressive_Huff_Format = jpegDecoder->progressive_Huff_Format;
     
-    if (progressive_Huff_Format) {
-        
-    }
     
     // Copy the quantization tables
     //#if !IS_DEFAULT_QTABLE
