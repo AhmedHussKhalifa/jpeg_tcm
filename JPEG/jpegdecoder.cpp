@@ -420,7 +420,7 @@ uint_16 jpeg_decoder::readQuantizationTables(uint_16 tableLengthFromBitStream)
         sizeOfElements  = tableOptions >> 4;     // Left most 4 bits of the byte
         tableIdentifier = tableOptions & 0x0F;   // Right most 4 bits of the byte
         
-        QuantizationTable qTable(false, false, -1);
+        QuantizationTable qTable(false, false);
         qTable.tableID = tableIdentifier;
 		qTable.tableLength = tableLengthFromBitStream;
         

@@ -26,7 +26,7 @@
 #define COMPONENT_Cr                     2
 
 // Indices for the default huffman table
-#define Y_DC_IDX                            0 
+#define Y_DC_IDX                            0
 #define CbCr_DC_IDX                         1
 #define Y_AC_IDX                            2
 #define CbCr_AC_IDX                         3
@@ -34,7 +34,7 @@
 
 
 // Table length for writing two quantization tables back to back with two DQT markers
-#define DQT_LENGTH_WITH_TWO_MARKERS      67 
+#define DQT_LENGTH_WITH_TWO_MARKERS      67
 
 
 // Table length for writing two quantization tables back to back with one DQT marker
@@ -49,10 +49,17 @@
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
 
-#define QFACTOR                          10
+#define QFACTOR                           10
 #define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
 #define TCM_OUTLIER_THRESHOLD             0
+
+
+// use default huffman tables in the encoder?
+#define IS_ENABLE_USE_DEFAULT_HUFF_TABLES    QFACTOR>=1
+
+// use Qtable from the input picture in the encoder?
+#define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
 
 
 
@@ -62,9 +69,9 @@ typedef std::pair<int, unsigned short> huffKey;
 // Progressive Encoder - Default Huffman Tables
 static const unsigned char code_length_freq[4][16] = {
 	{ 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
-	{ 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125 },
-	{ 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119 }
+{ 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
+{ 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125 },
+{ 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119 }
 };
 
 static const unsigned char kDCSyms[12] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };

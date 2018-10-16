@@ -1,0 +1,27 @@
+% Colourful Image Compression based on SVD decomposition
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+clear;
+clc;
+
+quality = 100:-10:10;
+
+% lion.jpg
+file_name = 'lion';
+file_suffix = '.jpg';
+accuracy = [];
+size = [];
+for i = 100:-10:10
+    file = strcat(file_name,'-QF-', num2str(i),file_suffix);
+    s=dir(file);
+    size = [size s.bytes];
+end
+
+
+    
+
+plot(quality, accuracy);
+xlabel('Quality Value in JPEG');
+ylabel('Accuracy in %');
+% ylim([0 95.5])
+title('Quality of JPEG vs TOP 1 accuracy');

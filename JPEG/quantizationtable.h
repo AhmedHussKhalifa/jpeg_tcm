@@ -21,7 +21,7 @@ public:
     int quantizationTableData[8][8];
 
     // component if true, then luminance; if false, then chrominance
-    QuantizationTable(bool writeFileProcess, bool component, int Q);
+    QuantizationTable(bool writeFileProcess, bool component);
     
 };
 

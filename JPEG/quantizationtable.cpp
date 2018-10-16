@@ -10,7 +10,7 @@
 #include "quantizationtable.h"
 
 
-QuantizationTable::QuantizationTable(bool writeFileProcess,bool component, int Q):tableID(-1), tableLength(-1){
+QuantizationTable::QuantizationTable(bool writeFileProcess,bool component):tableID(-1), tableLength(-1){
 	
     if(writeFileProcess==true && component==true) { //Luminance quantization table
 		/* Standard 
@@ -334,7 +334,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component, int Q
     }
 	
 	// Processing of quality factor
-	if (Q >= 1) {
+	/*if (Q >= 1) {
 		int S;
 		if (Q < 50)
 			S = 5000 / Q;
@@ -347,7 +347,7 @@ QuantizationTable::QuantizationTable(bool writeFileProcess,bool component, int Q
 				if (quantizationTableData[i][j] == 0) quantizationTableData[i][j] = 1;
 			}
 		}
-	}
+	}*/
     
 }
 
