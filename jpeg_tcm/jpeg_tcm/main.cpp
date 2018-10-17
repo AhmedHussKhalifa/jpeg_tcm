@@ -180,7 +180,7 @@ int main(int argc, const char * argv[]) {
         
         std::string filename = path_to_files + *it;
         jpeg_decoder test(filename);
-        cout << "Decode: " << filename << " is done!" << endl;
+        cout << "\n\nDecode: " << filename << " is done!" << endl;
 
         
         
