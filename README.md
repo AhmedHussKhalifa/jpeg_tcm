@@ -25,3 +25,4 @@ Created: September 2018
 - 2018-10-10: Support adjust Picture with Quality Factor (var QFACTOR in Typedef.h, not tested due to VS2017 issue)
 - 2018-10-15: Default huffman table writing is done to QF Experiement and Same QTable for QTable experiment is done
 - 2018-10-16: QF Experiment Configuration for VS2017 is done using default QT and HT as standard
+- 2018-10-17: Rounding value has to exist in Quantization process and Fix default HT

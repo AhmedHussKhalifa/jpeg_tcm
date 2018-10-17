@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include "operation.h"
+#include <math.h>
 
 
 const double pi = 3.1415926535897932384626433832795;
@@ -137,9 +138,10 @@ void jpeg_encoder::copy_qTables() {
                     S = floor(5000 / quality_factor);
                 else
                     S = 200 - 2 * quality_factor;
-                
                 quantization_table_write_process_luminance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_luminance.quantizationTableData[i][j] + 50) / 100);
-                if (quantization_table_write_process_luminance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
+				// quantization_table_write_process_luminance.quantizationTableData[i][j] = std::min(quantization_table_write_process_luminance.quantizationTableData[i][j], 2^(jpegDecoder->jpegImageSamplePrecision) - 1);
+				quantization_table_write_process_luminance.quantizationTableData[i][j] = std::min(quantization_table_write_process_luminance.quantizationTableData[i][j], (1 << jpegDecoder->jpegImageSamplePrecision) - 1);
+				if (quantization_table_write_process_luminance.quantizationTableData[i][j] == 0) quantization_table_write_process_luminance.quantizationTableData[i][j] = 1;
                 
             }
             
@@ -159,12 +161,16 @@ void jpeg_encoder::copy_qTables() {
                         S = 200 - 2 * quality_factor;
                     
                     quantization_table_write_process_chrominance.quantizationTableData[i][j] = floor((S*quantization_table_write_process_chrominance.quantizationTableData[i][j] + 50) / 100);
+					// quantization_table_write_process_chrominance.quantizationTableData[i][j] = std::min(quantization_table_write_process_chrominance.quantizationTableData[i][j], 2 ^ jpegDecoder->jpegImageSamplePrecision) - 1);
+					quantization_table_write_process_chrominance.quantizationTableData[i][j] = std::min(quantization_table_write_process_chrominance.quantizationTableData[i][j], (1 << jpegDecoder->jpegImageSamplePrecision) - 1);
+
                     if (quantization_table_write_process_chrominance.quantizationTableData[i][j] == 0) quantization_table_write_process_chrominance.quantizationTableData[i][j] = 1;
                 }
             }
             
         } // end inner
     } // end outer
+
 } // end copy_qTables
 
 // NEW to TCM: Apply TCM
@@ -545,7 +551,8 @@ void::jpeg_encoder::perform_fdct(uint_8 ** image, vector<int> &zigZagArray, int 
             // DCPM for the DC element of the compononet (including quantization)
             for (int u = 0; u < 8; ++u) {
                 for (int v = 0; v < 8; ++v) {
-                    block8x8[u][v] = block8x8[u][v] / quantizationTable[u][v];
+                    block8x8[u][v] = round(block8x8[u][v] / quantizationTable[u][v]);
+					
                     if (!u && !v) {
                         
                         // Store the DC coefficient
@@ -572,8 +579,8 @@ void::jpeg_encoder::perform_fdct(uint_8 ** image, vector<int> &zigZagArray, int 
             fankoosh++;
             if (currentComponent == COMPONENT_Y) {
                 ofstream myfile;
-                std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/JPEG/JPEG/";
-                std::string output_csv_name = path_to_files + "dog_Y_enc.csv";
+                std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/dataset/";
+                std::string output_csv_name = path_to_files + "Lena_Y_enc.csv";
                 myfile.open(output_csv_name, std::ofstream::out | std::ofstream::app);
                 
                 std::stringstream oss;
@@ -1069,32 +1076,24 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
             if (counter_FFEX > 0) {
                 add_byte_to_jpeg_enc_buffer(marker, file);
                 counter_FFEX--;
-                break;
             }
             else {
                 if (counter_FFDB == 0) {
                     // Write the DQT:
                     emit_DQT(file);
                     counter_FFDB++;
-                    int counter_FF = 0;
-                    while (1) {
-                        marker = fgetc(fp);
-                        if (marker != 0xFF) continue;
-                        else {
-                            counter_FF++;
-                            if (counter_FF > 1) {
-                                add_byte_to_jpeg_enc_buffer(marker, file);
-                                counter_FFEX--;
-                                break;
-                            }
-                            else {
-                                continue;
-                            }
-                        }
-                    }
-                }
-                break;
+					uint_8 marker_skip = marker;
+					uint_16 real_marker_skip = -1;
+                    for(int counter_skip_bytes = 0; counter_skip_bytes <= 0x44 + 0x43; counter_skip_bytes++){
+                        uint_8 prev_marker_skip = marker_skip;
+						marker_skip = fgetc(fp);
+						real_marker_skip = prev_marker_skip << 8 | marker_skip;
+						//cout <<std::hex<< real_marker_skip << endl;
+						//cout << ftell(fp) << endl;
+                    } 
+				} 
             }
+			break;
 #endif
 
 #if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
@@ -1872,7 +1871,7 @@ void jpeg_encoder::build_default_huffman_tables() {
             {
                 // element is the actual unique element in the alphabet
                 if(huffman_table_counter == 0 || huffman_table_counter == 1) element = kDCSyms[counter_coeff++]; // DC's
-                else if (huffman_table_counter == 3) element = kACSyms[0][counter_coeff++]; // Y-AC
+                else if (huffman_table_counter == 2) element = kACSyms[0][counter_coeff++]; // Y-AC
                 else element = kACSyms[1][counter_coeff++]; // C-AC
                 
                 table->codes[element] = code;

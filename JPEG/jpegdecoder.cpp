@@ -1860,8 +1860,8 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
     if(currentComponent == COMPONENT_Y) {
 		fankoosh++;
         ofstream myfile;
-        std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/JPEG/";
-        std::string output_csv_name = path_to_files + "goose_Y_dec.csv";
+        std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/dataset/";
+        std::string output_csv_name = path_to_files + "lena_Y_matlab.csv";
         myfile.open (output_csv_name, std::ofstream::out | std::ofstream::app);
         
         std::stringstream oss;
@@ -1872,22 +1872,22 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
         
 		myfile << currentX << "-" << currentY << "\n";
 
-		if (currentX == 1008 && currentY == 0) {
+		/*if (currentX == 1008 && currentY == 0) {
 			cout << currentX << "-" << currentY << "\n";
-		}
+		}*/
 
         for(int i = 0; i < 8; ++i) {
             for(int j = 0; j < 8; ++j) {
                 myfile << dataReshapedInto8x8[i][j] << ",";
 
-				if (currentX == 1008 && currentY == 0) {
+				/*if (currentX == 1008 && currentY == 0) {
 					cout << dataReshapedInto8x8[i][j] << ",";
-				}
+				}*/
             }
             
-			if (currentX >= 1008 && currentY == 0) {
+			/*if (currentX >= 1008 && currentY == 0) {
 				cout << "\n";
-			}
+			}*/
 
             if( (i + 1) < jpegImageHeight){
                 myfile << "\n";
@@ -1930,6 +1930,48 @@ void jpeg_decoder::decode_single_block(int offset, int stride, int currentCompon
 		// Perform dequantization
 		multiplyWithQuantizationTable(dataReshapedInto8x8, currentComponent);
 
+#if DEBUGLEVEL > 5
+		//    // TODO: remove FANKOOSH
+		static int fankoosh = 0;
+		if (currentComponent == COMPONENT_Y) {
+			fankoosh++;
+			ofstream myfile;
+			std::string path_to_files = "C:/Users/y77jiang/OneDrive - University of Waterloo/5e. TCM-Inception C++/jpeg_tcm/dataset/";
+			std::string output_csv_name = path_to_files + "lena_Y_original.csv";
+			myfile.open(output_csv_name, std::ofstream::out | std::ofstream::app);
+
+			std::stringstream oss;
+			std::size_t found = output_csv_name.find_last_of(".");
+			std::string path_with_name = output_csv_name.substr(0, found);
+			found = output_csv_name.find_last_of("/\\");
+			std::string name_file_only = path_with_name.substr(found + 1);
+
+			myfile << currentX << "-" << currentY << "\n";
+
+			/*if (currentX == 1008 && currentY == 0) {
+			cout << currentX << "-" << currentY << "\n";
+			}*/
+
+			for (int i = 0; i < 8; ++i) {
+				for (int j = 0; j < 8; ++j) {
+					myfile << dataReshapedInto8x8[i][j] << ",";
+
+					/*if (currentX == 1008 && currentY == 0) {
+					cout << dataReshapedInto8x8[i][j] << ",";
+					}*/
+				}
+
+				/*if (currentX >= 1008 && currentY == 0) {
+				cout << "\n";
+				}*/
+
+				if ((i + 1) < jpegImageHeight) {
+					myfile << "\n";
+				}
+			}
+			myfile.close();
+		}
+#endif 
 		// Perform inverse zig zag scanning
 		int dataReshapedInto8x8Zig[8][8] = { 0 };
 		inverseZigZagScanning(dataReshapedInto8x8Zig, dataReshapedInto8x8);
