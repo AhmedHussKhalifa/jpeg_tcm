@@ -29,6 +29,7 @@ using namespace cv;
 // Flag for whether this run is for multiple picture or not
 #define MULTI_PIC         0
 #define IS_ENABLE_ENCODER 1
+#define DECODE_SINGLE_PIC  0
 
 
 
@@ -38,6 +39,7 @@ int main(int argc, const char * argv[]) {
     /// JPEG Stuff
     std::string path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/";
     
+#if DECODE_SINGLE_PIC
     // yes all lena
 //          std::string filename = path_to_files + "Lena.jpg";
 //            std::string filename = path_to_files + "Lena_progressive.jpg";
@@ -56,6 +58,20 @@ int main(int argc, const char * argv[]) {
     //      std::string filename =  path_to_files + "Yang.jpg";
     //    std::string filename = path_to_files + "goose_org.jpg";
 //    		std::string filename = path_to_files + "dog.JPEG";
+//            std::string filename = path_to_files + "frog.JPEG";
+//            std::string filename = path_to_files + "godonla.JPEG";
+//            std::string filename = path_to_files + "goose.jpg";
+//            std::string filename = path_to_files + "hawk.JPEG";
+//            std::string filename = path_to_files + "lizzard.JPEG";
+//            std::string filename = path_to_files + "mouse.JPEG";
+//            std::string filename = path_to_files + "owl.JPEG";
+//            std::string filename = path_to_files + "pepper.jpg";
+//            std::string filename = path_to_files + "phone.JPEG";
+    
+
+            std::string filename = path_to_files + "river.jpg";
+    
+    
 //            std::string filename = path_to_files + "dog-QF-10.JPEG";
     //		std::string filename = path_to_files + "owl.JPEG";
     //		std::string filename = path_to_files + "ILSVRC2012_val_00000878.JPEG";
@@ -141,44 +157,70 @@ int main(int argc, const char * argv[]) {
     
 #endif
 
-    /////
-    // To account for names with _
-//    found = g_input_FileName.find_first_of("_");
-//    if(found != std::string::npos)
-//        g_input_FileName = g_input_FileName.substr(0, found);
     
-//
-//    FILE* pFile;
-//    string pF = path_to_files + "howy.yuv";
-//    const static char* pFileName = pF.c_str();
-//    pFile = fopen (pFileName, "wb");
-//    
-//        for (int y = 0; y < 512; y++ )
-//        {
-//            for (int x = 0; x < 512; x++ )
-//            {
-//                uint_8 uc = ptr[x][y];
-////                      uint_8    uc = 128;
-//                fwrite( &uc, sizeof(uint_8), 1, pFile );
-//            }
-//        }
-//    
-//    fclose(pFile);
-//    
-//    
-//    ofstream myfile;
-//    myfile.open (path_to_files + "howy.csv");
-//    for (int y = 0; y < 512; ++y ) {
-//        for(int x = 0 ; x < 512; ++x ) {
-//            uint_8 uc = ptr[x][y];
-//            myfile << static_cast<int>(uc) << ",";
-//        }
-//        myfile << "\n";
-//    }
-//    
-//    
-//    
-//    myfile.close();
+// Decode/Encode multiple pictures with predefined names
+#else
+    
+    std::vector<string> fileNameArray;
+    fileNameArray.push_back("frog.JPEG");
+    fileNameArray.push_back("godonla.JPEG");
+    fileNameArray.push_back("hawk.JPEG");
+    fileNameArray.push_back("lizzard.JPEG");
+    fileNameArray.push_back("mouse.JPEG");
+    fileNameArray.push_back("owl.JPEG");
+    fileNameArray.push_back("pepper.jpg");
+    fileNameArray.push_back("lizzard.JPEG");
+    fileNameArray.push_back("lizzard.JPEG");
+    fileNameArray.push_back("phone.JPEG");
+    fileNameArray.push_back("lion.jpg");
+    fileNameArray.push_back("river.jpg");
+    
+    for (std::vector<string>::iterator it = fileNameArray.begin() ; it != fileNameArray.end(); ++it) {
+        
+        
+        std::string filename = path_to_files + *it;
+        cout << "Decode: " << filename << endl;
+        jpeg_decoder test(filename);
+        
+        
+#if IS_ENABLE_ENCODER
+        // Encoding:
+        //    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
+        //    jpeg_encoder enc(&test, encoded_filename);
+        //    enc.savePicture();
+        
+        
+        // Quality factor experiment:
+        ////////////////////////////////////////////////////////
+        // Hossam: Save the input fileName
+        std::string encoded_filename = filename;
+        
+        ////// String Processing -- Get the file Name
+        size_t found = encoded_filename.find_last_of("/\\");
+        std::string filename_first_token = encoded_filename.substr(found+1);
+        found = filename_first_token.find_first_of(".");
+        std::string filename_second_token = filename_first_token.substr(0, found);
+        
+        
+        // for each quality factor
+        int end_quality_factor = 100;
+        for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += 10)
+        {
+            // Encoded output name
+            std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/";
+            encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
+            
+            cout << "encoded Output: " << encoded_filename << endl;
+            jpeg_encoder enc(&test, encoded_filename, quality_factor);
+            enc.savePicture();
+        } // end for each QualityFactor
+
+    } // end for each fileName
+    
+#endif 
+    
+#endif // end DECODE_SINGLE_PIC
+    
 //    
 //    
 //////    cv::Mat img(image_rows,image_cols,image_type,image_uchar,cv::Mat::AUTO_STEP);
