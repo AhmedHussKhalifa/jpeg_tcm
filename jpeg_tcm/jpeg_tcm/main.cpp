@@ -179,8 +179,9 @@ int main(int argc, const char * argv[]) {
         
         
         std::string filename = path_to_files + *it;
-        cout << "Decode: " << filename << endl;
         jpeg_decoder test(filename);
+        cout << "Decode: " << filename << " is done!" << endl;
+
         
         
 #if IS_ENABLE_ENCODER

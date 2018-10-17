@@ -11,9 +11,9 @@
 #define TYPEDEF_H
 
 #define PRINT_HUFFMAN_TABLE              0
-#define PRINT_QUANTIZATION_TABLE         1
-#define PRINT_FRAME_HEADER_SOF           1
-#define PRINT_SOS                        1
+#define PRINT_QUANTIZATION_TABLE         0
+#define PRINT_FRAME_HEADER_SOF           0
+#define PRINT_SOS                        0
 #define PRINT_BLOCK_PROGRESS             0
 #define DEBUGLEVEL                       12
 
@@ -60,6 +60,9 @@
 
 // use Qtable from the input picture in the encoder?
 #define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
+
+// how many bytes to skip while QFACTOR Experiment
+#define SKIP_BYTES_Q_FACTOR_EXP             (0x44 + 0x43)
 
 
 
