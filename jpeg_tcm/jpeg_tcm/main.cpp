@@ -205,7 +205,9 @@ int main(int argc, const char * argv[]) {
         
         // for each quality factor
         int end_quality_factor = 100;
-        for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += 10)
+//        int end_quality_factor = 20;
+        int quality_factor_step_size = 10;
+        for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += quality_factor_step_size)
         {
             // Encoded output name
             std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/";
