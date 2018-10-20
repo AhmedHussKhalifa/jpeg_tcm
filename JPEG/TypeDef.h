@@ -11,9 +11,9 @@
 #define TYPEDEF_H
 
 #define PRINT_HUFFMAN_TABLE              0
-#define PRINT_QUANTIZATION_TABLE         1
-#define PRINT_FRAME_HEADER_SOF           1
-#define PRINT_SOS                        1
+#define PRINT_QUANTIZATION_TABLE         0
+#define PRINT_FRAME_HEADER_SOF           0
+#define PRINT_SOS                        0
 #define PRINT_BLOCK_PROGRESS             0
 #define DEBUGLEVEL                       12
 
@@ -53,6 +53,7 @@
 #define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
 #define TCM_OUTLIER_THRESHOLD             0
+#define NUMBER_OF_PIC_TO_PROCESS          500
 
 
 // use default huffman tables in the encoder?
@@ -61,6 +62,9 @@
 // use Qtable from the input picture in the encoder?
 #define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
 
+// how many bytes to skip while QFACTOR Experiment
+#define SKIP_BYTES_Q_FACTOR_EXP_RGB					    (0x44 + 0x43)
+#define SKIP_BYTES_Q_FACTOR_EXP_BLKANDWHITE             (0x42)
 
 
 // Defines a tuple of length and code, for use in the Huffman maps
