@@ -131,7 +131,11 @@ void jpeg_encoder::copy_qTables() {
             QuantizationTable * from = jpegDecoder->components[COMPONENT_Y].componentQuantizationTable;
             quantization_table_write_process_luminance.quantizationTableData[i][j] = from->quantizationTableData[i][j];
 #endif
-            if (quality_factor >= 1) {
+            if (quality_factor >= 0) {
+                
+                // The range should start from 1; quality factor cannot be bigger than 0xFFFF
+                if(quality_factor == 0) quality_factor = 1;
+                
                 int S;
                 if (quality_factor < 50)
                     S = floor(5000 / quality_factor);
@@ -946,7 +950,14 @@ void jpeg_encoder::write_baseline_dct_info(ofstream &file) {
     emit_marker(M_SOF0, file);
     
     // Lf = 17 bytes
-    emit_word(0x11, file);
+    int comp_size = static_cast<int>(jpegDecoder->components.size());
+    
+    if (comp_size > 1) {
+        emit_word(0x11, file);
+    }
+    else {
+        emit_word(0x0B, file);
+    }
     
     // Precision
     emit_byte(0x08, file);
@@ -1049,7 +1060,7 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 }
 
 int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
-    
+    int comp_size = static_cast<int>(jpegDecoder->components.size());
     if (!fp) {
         printf("File failed to open.\n");
         return JPEG_SEG_ERR;
@@ -1066,10 +1077,10 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
 #endif
     
     switch (real_marker) {
-            // For progressive we stop here to deal with it with our default sequential writing
-            
+    // For progressive we stop here to deal with it with our default sequential writing
 #if IS_DEFAULT_QTABLE
         case 0xFFDB:
+            
             if (counter_FFEX > 0) {
                 add_byte_to_jpeg_enc_buffer(marker, file);
                 counter_FFEX--;
@@ -1081,7 +1092,16 @@ int jpeg_encoder::parseSegEnc(FILE * fp, ofstream &file) {
                     counter_FFDB++;
                     uint_8 marker_skip = marker;
                     uint_16 real_marker_skip = -1;
-                    for(int counter_skip_bytes = 0; counter_skip_bytes <= SKIP_BYTES_Q_FACTOR_EXP; counter_skip_bytes++){
+                    int number_to_skip = -1;
+                    
+                    if (comp_size > 1) {
+                        number_to_skip = SKIP_BYTES_Q_FACTOR_EXP_RGB;
+                    }
+                    else {
+                        number_to_skip = SKIP_BYTES_Q_FACTOR_EXP_BLKANDWHITE;
+                    }
+                    
+                    for(int counter_skip_bytes = 0; counter_skip_bytes <= number_to_skip; counter_skip_bytes++){
                         uint_8 prev_marker_skip = marker_skip;
                         marker_skip = fgetc(fp);
                         real_marker_skip = prev_marker_skip << 8 | marker_skip;
@@ -1296,6 +1316,7 @@ void jpeg_encoder::writeStartOfFileByteInFile(ofstream &file) {
 
 // Write huffman tables from the decoder:
 void jpeg_encoder::write_default_huffman_tables(ofstream &file) {
+    int comp_size = static_cast<int>(jpegDecoder->components.size());
     // First, calculate the table length (Lh)
     uint_16 table_length = 0;
     
@@ -1309,6 +1330,9 @@ void jpeg_encoder::write_default_huffman_tables(ofstream &file) {
     
     // Read components and their huffman tables
     for (int i = 0; i < default_huffmanTables.size(); ++i) {
+        if (comp_size <= 1 && (i == 1 || i == 3) ) {
+            continue;
+        }
         
         const HuffmanTable* hTable = default_huffmanTables.at(i);
         
@@ -1889,7 +1913,7 @@ void jpeg_encoder::build_default_huffman_tables() {
 
 bool jpeg_encoder::savePicture() {
     
-    cout << "\n\n Encode Start " << endl;
+//    cout << "\n\n Encode Start " << endl;
     // Identify whether this is a progressive encoder or not
     progressive_Huff_Format = jpegDecoder->progressive_Huff_Format;
     
@@ -1944,6 +1968,6 @@ bool jpeg_encoder::savePicture() {
     encodeImageEntryPoint(luminanceZigZagArray, chrominanceCbZigZagArray, chrominanceCrZigZagArray, output);
     writeEOFMarker(output);
     
-    cout << "Encoder Done!!" << endl;
+//    cout << "Encoder Done!!" << endl;
     return true;
 } // end savePicture

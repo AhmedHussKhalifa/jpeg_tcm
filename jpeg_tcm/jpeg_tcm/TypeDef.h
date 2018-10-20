@@ -10,6 +10,8 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
+
+#define PRINT_FIND_SEGMENTS_DECODER      0
 #define PRINT_HUFFMAN_TABLE              0
 #define PRINT_QUANTIZATION_TABLE         0
 #define PRINT_FRAME_HEADER_SOF           0
@@ -55,6 +57,8 @@
 #define TCM_OUTLIER_THRESHOLD             0
 
 
+
+
 // use default huffman tables in the encoder?
 #define IS_ENABLE_USE_DEFAULT_HUFF_TABLES    1
 
@@ -62,7 +66,8 @@
 #define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
 
 // how many bytes to skip while QFACTOR Experiment
-#define SKIP_BYTES_Q_FACTOR_EXP             (0x44 + 0x43)
+#define SKIP_BYTES_Q_FACTOR_EXP_RGB					    (0x44 + 0x43)
+#define SKIP_BYTES_Q_FACTOR_EXP_BLKANDWHITE             (0x42)
 
 
 

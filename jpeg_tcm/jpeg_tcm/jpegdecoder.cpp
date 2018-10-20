@@ -157,9 +157,11 @@ int jpeg_decoder::parseSeg()
         return JPEG_SEG_ERR;
     }
     
+#if PRINT_FIND_SEGMENTS_DECODER
     printf(
            "Found segment at file position %d: %s 0x%4x\n",
            fpos, segNames[id-0xFFC0].c_str(), id);
+#endif
     
     switch (id) {
             // Application specific segement will be ignored (not useful for our purpose)

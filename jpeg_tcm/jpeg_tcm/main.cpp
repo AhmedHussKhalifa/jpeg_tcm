@@ -6,8 +6,11 @@
 //  Copyright © 2018 Hossam Amer. All rights reserved.
 //
 
-#include "tcm.h"
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+
 #include <math.h>
 #include <ctime>
 #include <cv.h>
@@ -17,6 +20,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 
+#include "tcm.h"
 #include "jpegdecoder.h"
 
 #include "jpegencoder.h"
@@ -30,9 +34,159 @@ using namespace cv;
 #define MULTI_PIC         0
 #define IS_ENABLE_ENCODER 1
 #define DECODE_SINGLE_PIC  0
+#define IS_MAIN_NEW        1
 
 
+// main new
+#if IS_MAIN_NEW
 
+int main(int argc, const char * argv[]) {
+    // insert code here...
+    
+    if(argc < 4)
+    {
+        // Tell the user how to run the program
+        std::cerr << "Number of arguments should be 3: <input_file_with_full_path> <output_folder> <Quality_factor>" << std::endl;
+        /* "Usage messages" are a conventional way of telling the user
+         * how to run a program if they enter the command incorrectly.
+         */
+        return 1;
+    }
+    
+    /// JPEG Stuff
+//    std::string path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/";
+    
+    // Input file:
+    std::string filename = argv[1];
+    
+    // Ouptut folder path:
+    std::string enc_path_to_files = argv[2];
+    
+    // Input quality factor:
+    std::string arg = argv[3];
+    int quality_factor;
+    try {
+        std::size_t pos;
+        quality_factor = std::stoi(arg, &pos);
+        if (pos < arg.size()) {
+            std::cerr << "Trailing characters after number: " << arg << '\n';
+        }
+    } catch (std::invalid_argument const &ex) {
+        std::cerr << "Invalid number: " << arg << '\n';
+        return 1;
+    } catch (std::out_of_range const &ex) {
+        std::cerr << "Number out of range: " << arg << '\n';
+        return 1;
+    }
+    
+    // Quality factor experiment:
+    ////////////////////////////////////////////////////////
+    
+    try {
+        // Hossam: Save the input fileName
+        std::string encoded_filename = filename;
+        
+        ////// String Processing -- Get the file Name
+        size_t found = encoded_filename.find_last_of("/\\");
+        std::string filename_first_token = encoded_filename.substr(found+1);
+        found = filename_first_token.find_first_of(".");
+        std::string filename_second_token = filename_first_token.substr(0, found);
+        
+        
+        // Update the full path for the encoded_file name
+        encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
+        
+        
+        // Input params
+//        cout << "Input parameters: " << endl;
+//        cout << "input filename: " << filename << endl;
+//        cout << "output filename: " << encoded_filename << endl;
+//        cout << "quality_factor: " << quality_factor << endl;
+        
+        // Decode:
+        cout << "Start Decode " << filename << " @ " << quality_factor << endl;
+        jpeg_decoder test(filename);
+        cout << "Done Decode " << filename << " @ " << quality_factor << endl;
+        
+        // Encode:
+        cout << "\nStart Encode " << filename << " @ " << quality_factor << endl;
+        jpeg_encoder enc(&test, encoded_filename, quality_factor);
+        enc.savePicture();
+        cout << "Done Encode; Output is " << encoded_filename << endl;
+        
+
+    } catch (Exception e) {
+        cerr << "Input the folder properly" << endl;
+        return 1;
+        
+    }
+    
+//    std::vector<string> fileNameArray;
+//    fileNameArray.push_back("frog.JPEG");
+//    fileNameArray.push_back("godonla.JPEG");
+//    fileNameArray.push_back("hawk.JPEG");
+//    fileNameArray.push_back("lizzard.JPEG");
+//    fileNameArray.push_back("mouse.JPEG");
+//    fileNameArray.push_back("owl.JPEG");
+//    fileNameArray.push_back("pepper.jpg");
+//    fileNameArray.push_back("lizzard.JPEG");
+//    fileNameArray.push_back("lizzard.JPEG");
+//    fileNameArray.push_back("phone.JPEG");
+//    fileNameArray.push_back("lion.jpg");
+//    fileNameArray.push_back("river.jpg");
+//    
+//    for (std::vector<string>::iterator it = fileNameArray.begin() ; it != fileNameArray.end(); ++it) {
+//        
+//        
+//        std::string filename = path_to_files + *it;
+//        jpeg_decoder test(filename);
+//        cout << "\n\nDecode " << filename << " is done!" << endl;
+//        
+//        
+//        // Encoding:
+//        //    std::string encoded_filename = path_to_files + "Lena_encoded.jpg";
+//        //    jpeg_encoder enc(&test, encoded_filename);
+//        //    enc.savePicture();
+//        
+//        
+//        // Quality factor experiment:
+//        ////////////////////////////////////////////////////////
+//        // Hossam: Save the input fileName
+//        std::string encoded_filename = filename;
+//        
+//        ////// String Processing -- Get the file Name
+//        size_t found = encoded_filename.find_last_of("/\\");
+//        std::string filename_first_token = encoded_filename.substr(found+1);
+//        found = filename_first_token.find_first_of(".");
+//        std::string filename_second_token = filename_first_token.substr(0, found);
+//        
+//        
+//        // for each quality factor
+//        int end_quality_factor = 100;
+//        //        int end_quality_factor = 20;
+//        int quality_factor_step_size = 100;
+//        for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += quality_factor_step_size)
+//        {
+//            // Encoded output name
+//            std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/";
+//            encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
+//            
+//            cout << "encoded Output: " << encoded_filename << endl;
+//            jpeg_encoder enc(&test, encoded_filename, quality_factor);
+//            enc.savePicture();
+//        } // end for each QualityFactor
+//        
+//    } // end for each fileName
+    
+    
+    
+    return 0;
+}
+
+#else
+
+
+// main old
 int main(int argc, const char * argv[]) {
     // insert code here...
     
@@ -206,7 +360,7 @@ int main(int argc, const char * argv[]) {
         // for each quality factor
         int end_quality_factor = 100;
 //        int end_quality_factor = 20;
-        int quality_factor_step_size = 10;
+        int quality_factor_step_size = 100;
         for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += quality_factor_step_size)
         {
             // Encoded output name
@@ -235,3 +389,4 @@ int main(int argc, const char * argv[]) {
     
     return 0;
 }
+#endif
