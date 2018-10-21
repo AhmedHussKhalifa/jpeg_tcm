@@ -2,7 +2,7 @@
 # ./jpeg_tcm /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/goose.jpg /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/ 0
 
 # Number of Parallel tasks (make sure that they are multiples of 11 since we are running 11 QF per image)
-num_parallel_tasks=22
+num_parallel_tasks=33
 
 # Define the input path to files
 # input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
@@ -109,6 +109,8 @@ do
   # shift your commands array to the left for the tasks you already ran
   cmd_array=("${cmd_array[@]:$num_parallel_tasks}")
 
+  # shift your PID list (clear it)
+  PID_LIST=("${PID_LIST[@]:$num_parallel_tasks}")
 
 fi
 
