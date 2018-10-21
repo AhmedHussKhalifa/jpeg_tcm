@@ -1,15 +1,17 @@
 
 # ./jpeg_tcm /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/goose.jpg /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/ 0
 
-# Number of Parallel tasks
-num_parallel_tasks=20
+# Number of Parallel tasks (make sure that they are multiples of 11 since we are running 11 QF per image)
+num_parallel_tasks=22
 
 # Define the input path to files
-input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
+# input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
+input_path_to_files=/Volumes/DATA/ml/ImageNet_2nd
 
 
 # Define output path
-output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/
+# output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/
+output_path_to_files=/Volumes/DATA/ml/imageNet_output_folder/
 
 
 echo 'Processing JPEG files'
@@ -42,8 +44,17 @@ done
 
 # Generate the list of commands:
 
+
+echo 'Generating Commands list and running batches of images'
+
 # count the total number of commands
 commands_count=0
+
+
+# parallel group id
+group_id=0
+
+
 for (( i = 0; i < jpeg_files_count; i++ ))
 do
 	current_jpeg_help=${jpeg_files[$i]}
@@ -62,34 +73,22 @@ do
 
 	# echo '------------'
 
-done
+  # echo 'Commands Count:' $commands_count
+  if [ "$(($commands_count))" == "$num_parallel_tasks" ]; then
 
 
-
-# Run in Parallel - Sequence level parallelism
-# assume one case for now
-#num_parallel_tasks=2
-start=0
-group_id=0
-noSeq=$jpeg_files_count
-
-
-
-# Loop
-# while [  $start -lt $noSeq ]; do {
-while [  $start -lt $commands_count ]; do {
-
-  # end cannot exceed the length of the YUV array
-  end=$(($start + $num_parallel_tasks))
-  if [ "$(($end))" -gt "$commands_count" ]; then
-     end=$commands_count
-  fi
-
- # Start new fork for the next group
- if [ "$(($start))" == "$num_parallel_tasks" ]; then
+    # Run in Parallel - Sequence level parallelism
     group_id=$(($group_id + 1))
-    echo -e '\n\n New Group of id $group_id will start now...\n\n'
- fi
+    echo -e '\n\n New Group of id' $group_id 'will start now...\n\n'
+
+    # start of the commands list is always zero
+    start=0
+
+    # end cannot exceed the length of the YUV array
+    end=$(($start + $num_parallel_tasks))
+    if [ "$(($end))" -gt "$num_parallel_tasks" ]; then
+       end=$num_parallel_tasks
+    fi
 
   # Run in parallel
   while [  $start -lt $end ]; do {
@@ -104,12 +103,23 @@ while [  $start -lt $commands_count ]; do {
   echo "Parallel processes have started";
   wait $PID_LIST
   echo -e "\nAll processes have completed";
-} done
+
+  # reset the commands count
+  commands_count=0
+  # shift your commands array to the left for the tasks you already ran
+  cmd_array=("${cmd_array[@]:$num_parallel_tasks}")
 
 
-echo 'Total number of jpeg files executed: ' $jpeg_files_count
-echo 'Total number of QP factors executed: ' $noQp
-echo 'Total number of commands executed: ' $commands_count
+fi
+
+done # done for loop
+
+
+
+echo 'Total number of QP factors processed: ' $noQp
+echo 'Total number of jpeg files processed: ' $jpeg_files_count
+echo 'Total number of groups processed: ' $group_id
+# echo 'Total number of commands executed: ' $commands_count
 
 #******#******#******#******#******#******#******#******#******#******
 
