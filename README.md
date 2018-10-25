@@ -27,3 +27,4 @@ Created: September 2018
 - 2018-10-16: QF Experiment Configuration for VS2017 is done using default QT and HT as standard
 - 2018-10-17: Rounding value has to exist in Quantization process and Fix default HT
 - 2018-10-20: QF Experiment Configuration for dataset finalized and fix BW picture bug 
+- 2018-10-25: Added Inception V3 Group Running Python Sheet and MATLAB analysis sheet
