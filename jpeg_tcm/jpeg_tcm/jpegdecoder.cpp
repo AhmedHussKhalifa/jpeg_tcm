@@ -2028,6 +2028,7 @@ float jpeg_decoder::C(int u)
 
 int jpeg_decoder::func(int x, int y, const int block[8][8])
 {
+    const float PI = 3.14f;
     static bool isFirstTime = true;
     if(isFirstTime)
     {
@@ -2036,13 +2037,13 @@ int jpeg_decoder::func(int x, int y, const int block[8][8])
         {
             for (int j = 0; j < 8; j++)
             {
-                cosine_idct[j][i] = cosf( (2.0 * i + 1) * j * 3.14f * inv16 );
+                cosine_idct[j][i] = cosf( (2.0 * i + 1) * j * PI * inv16 );
             }
         }
         isFirstTime = false;
     }
     
-    const float PI = 3.14f;
+  
     float sum = 0;
     for( int u = 0; u < 8; ++u)
     {
