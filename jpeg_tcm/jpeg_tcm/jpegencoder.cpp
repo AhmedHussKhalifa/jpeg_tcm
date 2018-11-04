@@ -1032,6 +1032,20 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 #if IS_JPEG_ENCODER_WRITE_FAST
     // Seek to avoid 0xFFDA written twice for SOS marker
     num_bytes_in_jpeg_enc_write_buffer--;
+    
+#if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
+    write_baseline_dct_info(file);
+    build_default_huffman_tables();
+    write_default_huffman_tables(file);
+#else
+    if (progressive_Huff_Format) {
+        write_baseline_dct_info(file);
+        build_default_huffman_tables();
+        write_default_huffman_tables(file);
+    }
+#endif
+    
+    
 #else
     // Seek to avoid 0xFFDA written twice for SOS marker
     num_bytes_in_jpeg_enc_write_buffer--;
@@ -1573,8 +1587,8 @@ void jpeg_encoder::write_jfif_app0(ofstream &file) {
     emit_byte(0, file);
 }
 
-void jpeg_encoder::encodeImageEntryPoint(vector<int> luminanceZigZagArray,
-                                         vector<int> chrominanceCbZigZagArray, vector<int> chrominanceCrZigZagArray, ofstream &file) {
+void jpeg_encoder::encodeImageEntryPoint(vector<int> const &luminanceZigZagArray,
+                                         vector<int> const &chrominanceCbZigZagArray, vector<int> const &chrominanceCrZigZagArray, ofstream &file) {
     
     
     // Y is the original hFactor and vFactor; others are subsampled
@@ -1593,6 +1607,7 @@ void jpeg_encoder::encodeImageEntryPoint(vector<int> luminanceZigZagArray,
         {
             encode_mcu(luminanceZigZagArray, chrominanceCbZigZagArray, chrominanceCrZigZagArray, hFactor, vFactor, x, y, file);
         }
+        
     }
     
     // append the last few bits that are left
@@ -1608,7 +1623,7 @@ void jpeg_encoder::encodeImageEntryPoint(vector<int> luminanceZigZagArray,
     }
 }
 
-void jpeg_encoder::encode_mcu(vector<int> luminanceZigZagArray, vector<int> chrominanceCbZigZagArray, vector<int> chrominanceCrZigZagArray, int componentWidth, int componentHeight, int start_x, int start_y, ofstream &file) {
+void jpeg_encoder::encode_mcu(vector<int> const &luminanceZigZagArray, vector<int> const &chrominanceCbZigZagArray, vector<int> const &chrominanceCrZigZagArray, int componentWidth, int componentHeight, int start_x, int start_y, ofstream &file) {
     //cout << "height:" << componentHeight << " Width: " << componentWidth << endl;
     for (int y = 0; y < componentHeight; ++y)
     {
@@ -1617,10 +1632,22 @@ void jpeg_encoder::encode_mcu(vector<int> luminanceZigZagArray, vector<int> chro
             
             int luma_x = start_x + x * 8;
             int luma_y = start_y + y * 8;
-            
+
+#if PROFILE_JPEG_SAVE_PIC > 5
+            auto sEncodeStartTime = std::chrono::high_resolution_clock::now();
+#endif
             // encode block
             encode_block(luminanceZigZagArray, luma_x, luma_y, COMPONENT_Y, count_block_Y, file);
             count_block_Y++;
+
+#if PROFILE_JPEG_SAVE_PIC > 20
+            if(count_block_Y % 100 == 0) {
+                auto sEncodeEndTime = std::chrono::high_resolution_clock::now();
+                cout << "Encoding of 100 Y-blocks elapsed time: " <<  std::chrono::duration_cast<std::chrono::milliseconds>(sEncodeEndTime - sEncodeStartTime).count() << " milliseconds" << endl;
+            }
+#endif
+            
+            
         }
         
     }
@@ -1648,7 +1675,7 @@ void jpeg_encoder::encode_mcu(vector<int> luminanceZigZagArray, vector<int> chro
     }
 }
 
-void jpeg_encoder::encode_block(vector<int> zigZagArray, int CurrentX, int CurrentY, int currentComponent, int count_block, ofstream &file) {
+void jpeg_encoder::encode_block(vector<int> const &zigZagArray, int CurrentX, int CurrentY, int currentComponent, int count_block, ofstream &file) {
     
     // DC coding
 #if DEBUGLEVEL > 20
@@ -1943,6 +1970,11 @@ bool jpeg_encoder::savePicture() {
         perform_fdct(chrominanceCr, chrominanceCrZigZagArray, quantization_table_write_process_chrominance.quantizationTableData, COMPONENT_Cr);
     }
     
+    
+#if PROFILE_JPEG_SAVE_PIC
+    startTime = std::chrono::high_resolution_clock::now();
+#endif
+    
     // Here starts file writing process:
     string fileName = image_to_export_filename;
     ofstream output(fileName.c_str(), ios::out | ios::binary);
@@ -1967,6 +1999,12 @@ bool jpeg_encoder::savePicture() {
     emit_sos(output);
     encodeImageEntryPoint(luminanceZigZagArray, chrominanceCbZigZagArray, chrominanceCrZigZagArray, output);
     writeEOFMarker(output);
+    
+#if PROFILE_JPEG_SAVE_PIC
+    endTime = std::chrono::high_resolution_clock::now();
+    cout << "Encoding elapsed time: " <<  std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << " milliseconds" << endl;
+#endif
+    
     
 //    cout << "Encoder Done!!" << endl;
     return true;

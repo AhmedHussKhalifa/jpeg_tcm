@@ -46,7 +46,7 @@
 #define JPEG_OUT_HEADER_SIZE			 500
 
 // Is Fast way of writing in the encoder?
-#define IS_JPEG_ENCODER_WRITE_FAST       0
+#define IS_JPEG_ENCODER_WRITE_FAST       1
 
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
@@ -57,6 +57,14 @@
 #define TCM_OUTLIER_THRESHOLD             0
 
 
+// profile encoder?
+#define PROFILE_JPEG_SAVE_PIC             20
+
+// profile encoder IO?
+#define PROFILE_JPEG_IO_BLOCK             0
+
+// debug jpeg io?
+#define DEBUG_JPEG_IO                     0
 
 
 // use default huffman tables in the encoder?
