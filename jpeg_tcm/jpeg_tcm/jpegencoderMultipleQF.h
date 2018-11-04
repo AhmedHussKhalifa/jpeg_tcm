@@ -49,7 +49,6 @@ static bool runEncoderWithMultipleQF(std::string filename, std::string enc_path_
                                                        // Encode:
                                                        // inner loop
                                                        {
-                                                           //                                                           const int j = i*i;
                                                            const int quality_factor = i*10;
                                                            // Hossam: Save the input fileName
                                                            std::string encoded_filename = filename;
