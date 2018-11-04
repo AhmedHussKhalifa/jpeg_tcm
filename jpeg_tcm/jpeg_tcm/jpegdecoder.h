@@ -171,6 +171,8 @@ public:
     double cosine[106];
     int coefficients[4096];
     
+    double cosine_idct[8][8];
+    
     // information about the picture
     uint_16 jpegImageWidth, jpegImageHeight;
     int upscale_height;

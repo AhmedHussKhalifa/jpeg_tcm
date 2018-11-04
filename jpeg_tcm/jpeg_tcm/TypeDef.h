@@ -58,11 +58,11 @@
 
 
 // profile encoder?
-#define PROFILE_JPEG_SAVE_PIC               1
+#define PROFILE_JPEG_SAVE_PIC               0
 
 
 // profile decoder?
-#define PROFILE_JPEG_DECODE_PIC             1
+#define PROFILE_JPEG_DECODE_PIC             0
 
 
 // use default huffman tables in the encoder?
