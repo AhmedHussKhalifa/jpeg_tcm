@@ -95,9 +95,19 @@ jpeg_decoder::jpeg_decoder(std::string filename) : zigZagStart(0), zigZagEnd(63)
     // init the Y, Cb, Cr picture buffer into null:
     m_YPicture_buffer = m_CbPicture_buffer = m_CrPicture_buffer = NULL;
     
+    
+#if PROFILE_JPEG_DECODE_PIC
+    auto startTime = std::chrono::high_resolution_clock::now();
+#endif
+    
     // init the coefficients buffer into null:
     count_block_Y = count_block_Cb = count_block_Cr = 0;
     readFile();
+
+#if PROFILE_JPEG_DECODE_PIC
+    auto endTime = std::chrono::high_resolution_clock::now();
+    cout << "Decoding elapsed time: " <<  std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << " milliseconds" << endl;
+#endif
     
 }
 
