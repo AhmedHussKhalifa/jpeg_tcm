@@ -30,6 +30,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		905CD503218F6AF3003D3926 /* jpegencoderMultipleQF.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = jpegencoderMultipleQF.h; sourceTree = "<group>"; };
 		90DC915E21502544004FCBCF /* jpeg_tcm */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = jpeg_tcm; sourceTree = BUILT_PRODUCTS_DIR; };
 		90DC9168215025B2004FCBCF /* chi_square.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = chi_square.h; sourceTree = "<group>"; };
 		90DC9169215025B2004FCBCF /* component.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = component.cpp; sourceTree = "<group>"; };
@@ -105,6 +106,7 @@
 				90DC917D215025B2004FCBCF /* quantizationtable.h */,
 				90DC917F215025B2004FCBCF /* tcm.h */,
 				90DC9180215025B2004FCBCF /* TypeDef.h */,
+				905CD503218F6AF3003D3926 /* jpegencoderMultipleQF.h */,
 			);
 			path = jpeg_tcm;
 			sourceTree = "<group>";

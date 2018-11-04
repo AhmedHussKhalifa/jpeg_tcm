@@ -1387,7 +1387,10 @@ void jpeg_encoder::writeEOFMarker(ofstream &file) {
     emit_marker(M_EOI, file);
     
 #if	IS_JPEG_ENCODER_WRITE_FAST
+#if DEBUGLEVEL > 30
     cout << "FLUSHING AT THE END OF MARKER" << endl;
+#endif
+    
     flush_jpeg_enc_buffer(file);
 #endif
     
