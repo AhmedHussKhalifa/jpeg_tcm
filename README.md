@@ -30,3 +30,4 @@ Created: September 2018
 - 2018-10-25: Added Inception V3 Group Running Python Sheet and MATLAB analysis sheet
 - 2018-11-04: Optimised the JPEG decoder and the encoder to run 4k Pictures in about 20 seconds
 - 2018-11-04: Parallelized the quality factor execution and updated the bash script to account for this parallelism 
+- 2018-11-05: Added Inception ResNet V2 Group Running Python Sheet and updated Optimised the JPEG decoder and the encoder for VS

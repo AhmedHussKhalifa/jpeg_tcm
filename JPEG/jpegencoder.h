@@ -14,6 +14,7 @@
 #include <math.h>
 #include <fstream>
 
+#include <chrono>
 #include "inttypes.h"
 #include "component.h"
 #include "huffmantable.h"
@@ -76,6 +77,10 @@ private:
 	};
 
 
+	// encoder Profiling
+	std::chrono::high_resolution_clock::time_point startTime;
+	std::chrono::high_resolution_clock::time_point endTime;
+
 	// counter for Y, Cb, Cr blocks
 	int count_block_Y, count_block_Cb, count_block_Cr;
 	int total_block, total_block_C;
@@ -127,9 +132,9 @@ private:
 
 	int parseSegEnc(FILE * fp, ofstream &file);
 	// code
-	void encodeImageEntryPoint(vector<int> luminanceZigZagArray, vector<int> chrominanceCbZigZagArray, vector<int> chrominanceCrZigZagArray, ofstream &file);
-	void encode_mcu(vector<int> luminanceZigZagArray, vector<int> chrominanceCbZigZagArray, vector<int> chrominanceCrZigZagArray, int componentWidth, int componentHeight, int start_x, int start_y, ofstream &file);
-	void encode_block(vector<int> zigZagArray, int CurrentX, int CurrentY, int currentComponent, int count_block, ofstream &file);
+	void encodeImageEntryPoint(vector<int> const &luminanceZigZagArray, vector<int> const &chrominanceCbZigZagArray, vector<int> const &chrominanceCrZigZagArray, ofstream &file);
+	void encode_mcu(vector<int> const &luminanceZigZagArray, vector<int> const &chrominanceCbZigZagArray, vector<int> const &chrominanceCrZigZagArray, int componentWidth, int componentHeight, int start_x, int start_y, ofstream &file);
+	void encode_block(vector<int> const &zigZagArray, int CurrentX, int CurrentY, int currentComponent, int count_block, ofstream &file);
 	int returnIndexInZigZagArray(int count_block);
 
 	// Clamp our integer between 0 and 255

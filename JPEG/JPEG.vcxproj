@@ -156,6 +156,7 @@
     <ClInclude Include="inttypes.h" />
     <ClInclude Include="jpegdecoder.h" />
     <ClInclude Include="jpegencoder.h" />
+    <ClInclude Include="jpegencoderMultipleQF.h" />
     <ClInclude Include="jpegimage.h" />
     <ClInclude Include="operation.h" />
     <ClInclude Include="quantizationtable.h" />
