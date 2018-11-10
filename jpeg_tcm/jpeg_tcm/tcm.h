@@ -18,7 +18,8 @@
 
 using std::vector;
 
-#define MaxAmp 65536
+//#define MaxAmp 65536
+#define MaxAmp 256
 #define LambdaDelta 0.1
 #define MinLikelyhood  -1.e30
 //(-(1<<30))
@@ -36,6 +37,9 @@ class tcm {
     } tBucket;
     
 public:
+    
+//    static tBucket test[10];
+
     // TCM
     static double ComputeLambdaGivenYc(double Yc, double sumYi, double totalNumYi)
     {
@@ -94,6 +98,7 @@ public:
     }
     
     static void  ComputeLikelyhood(int thePoint, int N, tBucket *buck, int peak)
+//    static void  ComputeLikelyhood(int thePoint, int N, tBucket buck [MaxAmp], int peak)
     {
         
         double N1 = buck[thePoint].AcumSampNum ;
@@ -126,11 +131,15 @@ public:
         }
     }
     
-    static void TCMprocessOneSequence(vector<int> C, int Len, int *peak, double *prob, double *lambda, double *Yc)
+//    tBucket test[MaxAmp];
+//    tBucket tcm::test[10];
+    static void TCMprocessOneSequence(const vector<int> &C, int Len, int *peak, double *prob, double *lambda, double *Yc)
     {
         int k, MaxPos, StartPoint;
         double MaxLikelyhood, likelyhood ;
         tBucket buck[MaxAmp];
+        
+//        test[0].count = 0;
         
         *peak = 0 ;
         for(k=0;k<Len;k++)
@@ -190,6 +199,7 @@ public:
         //        return ;
         //    }
         
+//        ComputeLikelyhood(StartPoint, Len, buck, *peak)  ;
         ComputeLikelyhood(StartPoint, Len, buck, *peak)  ;
         
         MaxLikelyhood = buck[StartPoint].likelyhood ;
@@ -226,7 +236,7 @@ public:
     } // end TCMprocessOneSequence
     
     
-    static void count_outliers(const vector<double> yc_array, const int total_block, const vector<vector<int>> tCoeff_Y_AC, vector<int>& count_outlier_list ) {
+    static void count_outliers(vector<double> const & yc_array, const int total_block, const vector<vector<int>> &tCoeff_Y_AC, vector<int>& count_outlier_list ) {
         
         // Attempt of Variable d(shift) according to the magnitude of Yc
         /*vector<int> shift;

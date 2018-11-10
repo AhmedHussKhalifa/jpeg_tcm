@@ -34,8 +34,9 @@ using namespace cv;
 // Flag for whether this run is for multiple picture or not
 #define MULTI_PIC         0
 #define IS_ENABLE_ENCODER 1
-#define DECODE_SINGLE_PIC  0
-#define IS_MAIN_NEW        2
+#define DECODE_SINGLE_PIC  1
+#define IS_MAIN_NEW        0
+#define RUN_TCM_ANALYSIS_WITHOUT_QF 1
 
 
 #if IS_MAIN_NEW>1
@@ -368,7 +369,12 @@ int main(int argc, const char * argv[]) {
         
         
         // Update the full path for the encoded_file name
+#if RUN_TCM_ANALYSIS_WITHOUT_QF
+        encoded_filename = enc_path_to_files + filename_second_token + "_TCM" + filename_first_token.substr(found);
+
+#else
         encoded_filename = enc_path_to_files + filename_second_token + "-QF-" + to_string(quality_factor) + filename_first_token.substr(found);
+#endif
         
         
         // Input params
@@ -384,7 +390,11 @@ int main(int argc, const char * argv[]) {
         
         // Encode:
         cout << "\nStart Encode " << filename << " @ " << quality_factor << endl;
+#if RUN_TCM_ANALYSIS_WITHOUT_QF
+         jpeg_encoder enc(&test, encoded_filename);
+#else
         jpeg_encoder enc(&test, encoded_filename, quality_factor);
+#endif
         enc.savePicture();
         cout << "Done Encode; Output is " << encoded_filename << endl;
         
@@ -500,7 +510,9 @@ int main(int argc, const char * argv[]) {
     
 
 //            std::string filename = path_to_files + "river.jpg";
-            std::string filename = path_to_files + "Lena.jpg";
+//            std::string filename = path_to_files + "Lena.jpg";
+
+            std::string filename = path_to_files + "slowPic.JPEG";
 //            std::string filename = path_to_files + "lion_org.jpeg";
     
     
@@ -573,7 +585,15 @@ int main(int argc, const char * argv[]) {
     found = filename_first_token.find_first_of(".");
     std::string filename_second_token = filename_first_token.substr(0, found);
     
-    
+
+#if RUN_TCM_ANALYSIS_WITHOUT_QF
+    cout << "\nStart Encode " << filename << " @ TCM" << endl;
+    std::string enc_path_to_files = "/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/out_tcm_analysis/";
+    encoded_filename = enc_path_to_files + filename_second_token + "_TCM" + filename_first_token.substr(found);
+    jpeg_encoder enc(&test, encoded_filename);
+    enc.savePicture();
+    cout << "Done Encode; Output is " << encoded_filename << endl;
+#else
     // for each quality factor
     int end_quality_factor = 100;
     for (int quality_factor = QFACTOR; quality_factor <= end_quality_factor ; quality_factor += 10)
@@ -586,6 +606,7 @@ int main(int argc, const char * argv[]) {
         jpeg_encoder enc(&test, encoded_filename, quality_factor);
         enc.savePicture();
     }
+#endif
     
 #endif
 
@@ -608,6 +629,8 @@ int main(int argc, const char * argv[]) {
 //    fileNameArray.push_back("river.jpg");
     
     fileNameArray.push_back("lion_org.jpg");
+    
+//    fileNameArray.push_back("slowPic.JPEG");
     
     
     for (std::vector<string>::iterator it = fileNameArray.begin() ; it != fileNameArray.end(); ++it) {
