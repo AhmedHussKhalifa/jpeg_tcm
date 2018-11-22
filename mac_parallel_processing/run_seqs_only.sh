@@ -2,17 +2,20 @@
 # ./jpeg_tcm /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/goose.jpg /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/ 0
 
 # Number of Parallel tasks (make sure that they are multiples of 11 since we are running 11 QF per image)
-num_parallel_tasks=21
+num_parallel_tasks=8
 
 # Define the input path to files
-# input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
+input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
 # input_path_to_files=/Volumes/DATA/ml/ImageNet_2nd
-input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/tcm_analysis
+# input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/tcm_analysis
+# input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/set/set1
 
 
 # Define output path
 # output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/
-output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/out_tcm_analysis/
+output_path_to_files=/Volumes/DATA/ml/test/
+# output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/out_tcm_analysis/
+# output_path_to_files=/Volumes/DATA/ml/tcm_out5/
 
 
 
@@ -60,21 +63,21 @@ group_id=0
 
 for (( i = 0; i < jpeg_files_count; i++ ))
 do
-	current_jpeg_help=${jpeg_files[$i]}
-	current_jpeg=$input_path_to_files/$current_jpeg_help
-	#echo $current_jpeg
+  current_jpeg_help=${jpeg_files[$i]}
+  current_jpeg=$input_path_to_files/$current_jpeg_help
+  #echo $current_jpeg
 
-	# For every YUV, CFG, Case sequence file -> Run All Qps
-	# for ((j = 1; j<=noQp;j++))
-	# do
-		# cmd="./jpeg_tcm $current_jpeg $output_path_to_files "${Qp[$j]}""
-		cmd="./jpeg_tcm $current_jpeg $output_path_to_files 100"
-    	cmd_array+=("$cmd")
-    	let "commands_count+=1"
-    	# echo $cmd
-	# done
+  # For every YUV, CFG, Case sequence file -> Run All Qps
+  # for ((j = 1; j<=noQp;j++))
+  # do
+    # cmd="./jpeg_tcm $current_jpeg $output_path_to_files "${Qp[$j]}""
+    cmd="./jpeg_tcm_no_cv $current_jpeg $output_path_to_files 100"
+      cmd_array+=("$cmd")
+      let "commands_count+=1"
+       # echo $cmd
+  # done
 
-	# echo '------------'
+  # echo '------------'
 
   # echo 'Commands Count:' $commands_count
   if [ "$(($commands_count))" == "$num_parallel_tasks" ]; then
@@ -107,13 +110,19 @@ do
   wait $PID_LIST
   echo -e "\nAll processes have completed";
 
+
   # reset the commands count
   commands_count=0
   # shift your commands array to the left for the tasks you already ran
   cmd_array=("${cmd_array[@]:$num_parallel_tasks}")
 
   # shift your PID list (clear it)
-  PID_LIST=("${PID_LIST[@]:$num_parallel_tasks}")
+  #PID_LIST=("${PID_LIST[@]:$num_parallel_tasks}")
+  PID_LIST=("${PID_LIST[@]:$group_id}") # group by group
+
+  # echo "PID LIST Length: " ${#PID_LIST[@]}
+  # echo ${PID_LIST[0]} 
+
 
 fi
 
