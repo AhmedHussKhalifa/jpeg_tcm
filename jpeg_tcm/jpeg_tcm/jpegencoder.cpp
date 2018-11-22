@@ -230,6 +230,22 @@ void::jpeg_encoder::perform_TCM() {
     }
     cout << "Max OBF: " << max << "; Min OBF: " << min<<endl;
     
+    
+    ////// String Processing -- Get the file Name
+//    std::string encoded_filename = image_to_export_filename;
+//    size_t found = encoded_filename.find_last_of("/\\");
+//    std::string filename_first_token = encoded_filename.substr(found+1);
+//    found = filename_first_token.find_first_of(".");
+//    std::string filename_second_token = filename_first_token.substr(0, found);
+//    string tcm_store = "";
+//    std::ostringstream oss;
+//    oss << "/Volumes/DATA/ml/tcm_out6/" << filename_second_token << "_" << max;
+//    tcm_store = oss.str();
+//    char* pYUVFileName = tcm_store.empty()? NULL: strdup(tcm_store.c_str());
+//    FILE* sastre_pFile = fopen (pYUVFileName, "w");
+//    fprintf(sastre_pFile, "%d\n", max);
+//    fclose(sastre_pFile);
+
     // cout << count_outlier_list_sort[floor(count_outlier_list_sort.size()*0.70)];
     
     // Beform Doing TCM Record the histrogram of tCoeff_Y for reference

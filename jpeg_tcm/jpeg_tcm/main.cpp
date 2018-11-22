@@ -34,8 +34,8 @@ using namespace cv;
 // Flag for whether this run is for multiple picture or not
 #define MULTI_PIC         0
 #define IS_ENABLE_ENCODER 1
-#define DECODE_SINGLE_PIC  1
-#define IS_MAIN_NEW        0
+#define DECODE_SINGLE_PIC  0
+#define IS_MAIN_NEW        2
 #define RUN_TCM_ANALYSIS_WITHOUT_QF 1
 
 

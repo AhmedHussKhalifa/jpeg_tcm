@@ -10,6 +10,8 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
+
+#define PRINT_FIND_SEGMENTS_DECODER      0
 #define PRINT_HUFFMAN_TABLE              0
 #define PRINT_QUANTIZATION_TABLE         0
 #define PRINT_FRAME_HEADER_SOF           0
@@ -44,7 +46,7 @@
 #define JPEG_OUT_HEADER_SIZE			 500
 
 // Is Fast way of writing in the encoder?
-#define IS_JPEG_ENCODER_WRITE_FAST       0
+#define IS_JPEG_ENCODER_WRITE_FAST       1
 
 // Threshold that flag of the count block outlier to to be non-black block
 #define NON_BLACK						 2
@@ -53,11 +55,18 @@
 #define IS_DEFAULT_QTABLE                 1
 #define IS_ONLY_TCM                       1
 #define TCM_OUTLIER_THRESHOLD             0
-#define NUMBER_OF_PIC_TO_PROCESS          500
+
+
+// profile encoder?
+#define PROFILE_JPEG_SAVE_PIC               1
+
+
+// profile decoder?
+#define PROFILE_JPEG_DECODE_PIC             1
 
 
 // use default huffman tables in the encoder?
-#define IS_ENABLE_USE_DEFAULT_HUFF_TABLES    QFACTOR>=1
+#define IS_ENABLE_USE_DEFAULT_HUFF_TABLES    1
 
 // use Qtable from the input picture in the encoder?
 #define IS_ENABLE_USE_QTABLE_FROM_PICTURE    0
@@ -67,15 +76,16 @@
 #define SKIP_BYTES_Q_FACTOR_EXP_BLKANDWHITE             (0x42)
 
 
+
 // Defines a tuple of length and code, for use in the Huffman maps
 typedef std::pair<int, unsigned short> huffKey;
 
 // Progressive Encoder - Default Huffman Tables
 static const unsigned char code_length_freq[4][16] = {
 	{ 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
-{ 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
-{ 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125 },
-{ 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119 }
+	{ 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
+	{ 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125 },
+	{ 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119 }
 };
 
 static const unsigned char kDCSyms[12] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
@@ -122,5 +132,5 @@ static const unsigned char kACSyms[2][162] = {
 	0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
 	0xea, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
 	0xf9, 0xfa }
-};
+	};
 #endif /* TypeDef_h */

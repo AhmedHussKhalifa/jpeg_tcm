@@ -6,7 +6,7 @@ clc;
 
 quality = 100:-10:0;
 
-acc_file_name = 'Accuracy Record ILSVRC2012 QF.xls';
+acc_file_name = 'Accuracy Record ILSVRC2012 QF V4 MAX.xls';
 sheet=1;
 accuracy = [];
 size = [];
@@ -22,7 +22,7 @@ size = [];
 %     accuracy = [accuracy data];
 % end
 [num,txt,raw] = xlsread(acc_file_name, sheet); % Read the excel sheet from local
-%% MAX QF Method
+%% MAX QF Method For V3
 % maxGT_cell = [];
 % GT_acc = [];
 % QF = [];
@@ -45,31 +45,55 @@ size = [];
 % xlswrite(acc_file_name,GT_acc,sheet,'BG2');
 % xlswrite(acc_file_name,QF,sheet,'BH2');
 
-%% Groud Truth Accuracy Depends on Highest First one accuracy
-Top1_cell = [];
+%% MAX QF Method For V4
+maxGT_cell = [];
 GT_acc = [];
 QF = [];
 rank = []; 
-First_1 = [];
 for i = 2:1:1001
-    for j = 11:5:56
-        Top1_cell = [Top1_cell num(i,j)];
+    for j = 6:2:24
+        maxGT_cell = [maxGT_cell num(i,j)];
     end
-    [Max_Top1 Max_Top1_index] = max(Top1_cell);
-    GT_acc = [GT_acc; num(i,9+5*(Max_Top1_index-1))];
-    QF = [QF;110-10*Max_Top1_index];
-    rank = [rank; num(i,8+5*(Max_Top1_index-1))];
-    First_1 = [First_1; Max_Top1];
-    Top1_cell = [];
+    [Max_GT Max_GT_index] = max(maxGT_cell);
+    GT_acc = [GT_acc; Max_GT];
+    QF = [QF;110-10*Max_GT_index];
+    rank = [rank; num(i,5+2*(Max_GT_index-1))];
+    maxGT_cell = [];
 end
  
-GT_avg = mean(GT_acc);
-QF_avg = mean(QF);
+GT_avg = mean(GT_acc)
+QF_avg = mean(QF)
 
-xlswrite(acc_file_name,rank,sheet,'BL2');
-xlswrite(acc_file_name,GT_acc,sheet,'BM2');
-xlswrite(acc_file_name,QF,sheet,'BN2');
-% xlswrite(acc_file_name,First_1,sheet,'BO2');
+xlswrite(acc_file_name,rank,sheet,'Y2');
+xlswrite(acc_file_name,GT_acc,sheet,'Z2');
+xlswrite(acc_file_name,QF,sheet,'AA2');
+
+
+%% Groud Truth Accuracy Depends on Highest First one accuracy
+% Top1_cell = [];
+% GT_acc = [];
+% QF = [];
+% rank = []; 
+% First_1 = [];
+% for i = 2:1:1001
+%     for j = 11:5:46
+%         Top1_cell = [Top1_cell num(i,j)];
+%     end
+%     [Max_Top1 Max_Top1_index] = max(Top1_cell);
+%     GT_acc = [GT_acc; num(i,9+5*(Max_Top1_index-1))];
+%     QF = [QF;110-10*Max_Top1_index];
+%     rank = [rank; num(i,8+5*(Max_Top1_index-1))];
+%     First_1 = [First_1; Max_Top1];
+%     Top1_cell = [];
+% end
+%  
+% GT_avg = mean(GT_acc);
+% QF_avg = mean(QF);
+% 
+% xlswrite(acc_file_name,rank,sheet,'BL2');
+% xlswrite(acc_file_name,GT_acc,sheet,'BM2');
+% xlswrite(acc_file_name,QF,sheet,'BN2');
+% % xlswrite(acc_file_name,First_1,sheet,'BO2');
 
 %% Plotting Part
 % plot(quality, accuracy, '-*');
