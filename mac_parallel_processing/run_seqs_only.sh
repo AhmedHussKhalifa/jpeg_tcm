@@ -71,7 +71,7 @@ do
   # for ((j = 1; j<=noQp;j++))
   # do
     # cmd="./jpeg_tcm $current_jpeg $output_path_to_files "${Qp[$j]}""
-    cmd="./jpeg_tcm_no_cv $current_jpeg $output_path_to_files 100"
+    cmd="./jpeg_tcm $current_jpeg $output_path_to_files 100"
       cmd_array+=("$cmd")
       let "commands_count+=1"
        # echo $cmd
