@@ -2,10 +2,13 @@
 # ./jpeg_tcm /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/goose.jpg /Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/ 0
 
 # Number of Parallel tasks (make sure that they are multiples of 11 since we are running 11 QF per image)
-num_parallel_tasks=8
+num_parallel_tasks=200
 
+for (( folder = 1; folder < 126; folder++ ))
+do
+	
 # Define the input path to files
-input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
+input_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/training_set_500/$folder
 # input_path_to_files=/Volumes/DATA/ml/ImageNet_2nd
 # input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/tcm_analysis
 # input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/set/set1
@@ -13,7 +16,7 @@ input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/test_input/tst
 
 # Define output path
 # output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/
-output_path_to_files=/Volumes/DATA/ml/test/
+output_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/train_output_folder/$folder/
 # output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/out_tcm_analysis/
 # output_path_to_files=/Volumes/DATA/ml/tcm_out5/
 
@@ -61,6 +64,7 @@ commands_count=0
 group_id=0
 
 
+let "count_helper=$jpeg_files_count-1"
 for (( i = 0; i < jpeg_files_count; i++ ))
 do
   current_jpeg_help=${jpeg_files[$i]}
@@ -71,10 +75,10 @@ do
   # for ((j = 1; j<=noQp;j++))
   # do
     # cmd="./jpeg_tcm $current_jpeg $output_path_to_files "${Qp[$j]}""
-    cmd="./jpeg_tcm $current_jpeg $output_path_to_files 100"
+    cmd="./jpeg_tcm_no_cv $current_jpeg $output_path_to_files 100"
       cmd_array+=("$cmd")
       let "commands_count+=1"
-       # echo $cmd
+      #  echo $cmd
   # done
 
   # echo '------------'
@@ -118,13 +122,64 @@ do
 
   # shift your PID list (clear it)
   #PID_LIST=("${PID_LIST[@]:$num_parallel_tasks}")
-  PID_LIST=("${PID_LIST[@]:$group_id}") # group by group
+  PID_LIST=("${PID_LIST[@]:1}") # group by group
 
-  # echo "PID LIST Length: " ${#PID_LIST[@]}
-  # echo ${PID_LIST[0]} 
-
+  echo "PID LIST Length: " ${#PID_LIST[@]}
+  echo ${PID_LIST[0]} 
 
 fi
+
+
+# Remaining cmds
+if [ "$(($i))" == "$count_helper" ]; then
+	cmd_len=${#cmd_array[@]}
+if [ "$cmd_len" -lt "$num_parallel_tasks" ]; then
+
+    # Run in Parallel - Sequence level parallelism
+    group_id=$(($group_id + 1))
+    echo -e '\n\n New Group of id' $group_id 'will start now for remaining cmds...\n\n'
+   
+
+    # start of the commands list is always zero
+    start=0
+
+    # end cannot exceed the length of the YUV array
+    end=$(($start + $num_parallel_tasks))
+    if [ "$(($end))" -gt "$cmd_len" ]; then
+       end=$cmd_len
+    fi
+
+  # Run in parallel
+  while [  $start -lt $end ]; do {
+    cmd="${cmd_array[start]}"
+    echo "Process \"$start\" \"$cmd\" started";
+    $cmd & pid=$!
+    PID_LIST+=" $pid";
+    start=$(($start + 1))
+  } done
+
+  trap "kill $PID_LIST" SIGINT
+  echo "Parallel processes have started";
+  wait $PID_LIST
+  echo -e "\nAll processes have completed";
+
+
+  # reset the commands count
+  commands_count=0
+  # shift your commands array to the left for the tasks you already ran
+  cmd_array=("${cmd_array[@]:$num_parallel_tasks}")
+
+  # shift your PID list (clear it)
+  #PID_LIST=("${PID_LIST[@]:$num_parallel_tasks}")
+  PID_LIST=("${PID_LIST[@]:1}") # group by group
+
+  echo "PID LIST Length: " ${#PID_LIST[@]}
+  echo ${PID_LIST[0]} 
+
+fi # done check inner
+
+fi # done check last iteration
+
 
 done # done for loop
 
@@ -135,5 +190,7 @@ echo 'Total number of jpeg files processed: ' $jpeg_files_count
 echo 'Total number of groups processed: ' $group_id
 # echo 'Total number of commands executed: ' $commands_count
 
+
+done # folder loop
 #******#******#******#******#******#******#******#******#******#******
 
