@@ -35,6 +35,9 @@
 
 
 
+// Maximum number of supported color components
+#define MAX_NUMBER_SUPPORTED_COLOR_COMPONENTS     3
+
 // Table length for writing two quantization tables back to back with two DQT markers
 #define DQT_LENGTH_WITH_TWO_MARKERS      67
 

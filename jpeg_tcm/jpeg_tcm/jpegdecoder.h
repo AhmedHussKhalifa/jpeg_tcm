@@ -276,6 +276,89 @@ public:
     void multiplyWithQuantizationTable(int dataBlock[8][8], int currentComponent);
     
     
+    void logErrorPictures() {
+        
+        cerr << "Error using jpegDecoder: Problem in parsing." << endl;
+        size_t found = jpeg_filename.find_last_of("/\\");
+        std::string filename_before_slash = jpeg_filename.substr(0, found);
+        
+        // up one level
+        found = filename_before_slash.find_last_of("/\\");
+        std::string filename_before_slash_up = filename_before_slash.substr(0, found);
+        
+        std::string filename_first_token = jpeg_filename.substr(found+1);
+        found = filename_first_token.find_first_of(".");
+        std::string filename_second_token = filename_first_token.substr(0, found);
+        string log_filename = "";
+        std::ostringstream oss;
+        oss << filename_before_slash_up << "/Other_Error_Pictures.txt";
+        log_filename = oss.str();
+        char* log_filename_char = log_filename.empty()? NULL: strdup(log_filename.c_str());
+        FILE* fileId = fopen (log_filename_char, "a");
+        fprintf(fileId, "%s\n", filename_second_token.c_str());
+        fclose(fileId);
+        
+        cout << "Exiting after making a log at: " << log_filename << endl;
+        
+        // Create a text file inside the folder with the image name
+        oss.clear(); oss.str("");
+        found = filename_second_token.find_last_of("/\\");
+        filename_second_token = filename_second_token.substr(found+1);
+        oss << filename_before_slash << "/" << filename_second_token << "_other" << ".txt";
+        log_filename = oss.str();
+        log_filename_char = log_filename.empty()? NULL: strdup(log_filename.c_str());
+        fileId = fopen (log_filename_char, "w");
+        fprintf(fileId, "%s\n", filename_second_token.c_str());
+        fclose(fileId);
+        
+        cout << "Exiting after making a log at: " << log_filename << endl;
+        
+        
+        exit(0);
+    }
+    
+    void logCMYKErrorPictures() {
+        
+        cerr << "Error using jpegDecoder: JPEG images with CMYK colorspace are not currently supported." << endl;
+        size_t found = jpeg_filename.find_last_of("/\\");
+        std::string filename_before_slash = jpeg_filename.substr(0, found);
+        
+        
+        // up one level
+        found = filename_before_slash.find_last_of("/\\");
+        std::string filename_before_slash_up = filename_before_slash.substr(0, found);
+        
+        std::string filename_first_token = jpeg_filename.substr(found+1);
+        found = filename_first_token.find_first_of(".");
+        std::string filename_second_token = filename_first_token.substr(0, found);
+        string log_filename = "";
+        std::ostringstream oss;
+        oss << filename_before_slash_up << "/CMYK_Error_Pictures.txt";
+        log_filename = oss.str();
+        char* log_filename_char = log_filename.empty()? NULL: strdup(log_filename.c_str());
+        FILE* fileId = fopen (log_filename_char, "a");
+        fprintf(fileId, "%s\n", filename_second_token.c_str());
+        fclose(fileId);
+        
+        cout << "Exiting after making a log at: " << log_filename << endl;
+        
+        // Create a text file inside the folder with the image name
+        oss.clear(); oss.str("");
+        found = filename_second_token.find_last_of("/\\");
+        filename_second_token = filename_second_token.substr(found+1);
+        oss << filename_before_slash << "/" << filename_second_token << "_cmyk" << ".txt";
+        log_filename = oss.str();
+        log_filename_char = log_filename.empty()? NULL: strdup(log_filename.c_str());
+        fileId = fopen (log_filename_char, "w");
+        fprintf(fileId, "%s\n", filename_second_token.c_str());
+        fclose(fileId);
+        
+        cout << "Exiting after making a log at: " << log_filename << endl;
+        
+        
+        exit(0);
+    }
+    
     
     // Reading bits uitilities (declare them inline for speed purposes)
     

@@ -755,6 +755,13 @@ uint_16 jpeg_decoder::readScanHeader(uint_16 headerLength) {
     // number of components //Ns in standard
     numberOfComponents = fgetc(fp);
     
+    
+    // catch the exception from CMYK color space
+    if(numberOfComponents > MAX_NUMBER_SUPPORTED_COLOR_COMPONENTS)
+    {
+        logCMYKErrorPictures();
+    }
+    
     // Increment bytes_read
     bytes_read += 3;
     
@@ -1331,6 +1338,10 @@ void jpeg_decoder::process_huffmann_data_unit_progressive(int currentComponent ,
                                     cout << ftell(fp) << endl;
                                     cout << "-|- ##ERROR## Coefficients counter = " << coeff_counter << " is greater than ACcount " << ACcount << endl;
                                     // in case of error, doing the other stuff will just do more errors so return here
+                                    
+                                    // Log it
+                                    logErrorPictures();
+                                    
                                     return;
                                 } // end if
                                 
@@ -1749,6 +1760,10 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent, int currentX
                     {
                         cout << "-|- ##ERROR## Coefficients counter = " << coeff_counter << " is greater than ACcount " << ACcount << endl;
                         // in case of error, doing the other stuff will just do more errors so return here
+                        
+                        // Log it
+                        logErrorPictures();
+                        
                         return;
                     } // end if
                     

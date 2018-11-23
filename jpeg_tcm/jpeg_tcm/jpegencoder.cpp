@@ -1048,6 +1048,12 @@ void jpeg_encoder::writeHeaderFromOriginalPicture(ofstream &file) {
 #if IS_JPEG_ENCODER_WRITE_FAST
     // Seek to avoid 0xFFDA written twice for SOS marker
     num_bytes_in_jpeg_enc_write_buffer--;
+
+    // Your number of bytes in the buffer cannot be less than zero under any case
+    if(num_bytes_in_jpeg_enc_write_buffer < 0) {
+        num_bytes_in_jpeg_enc_write_buffer = 0;
+    }
+    
     
 #if IS_ENABLE_USE_DEFAULT_HUFF_TABLES
     write_baseline_dct_info(file);
@@ -1222,6 +1228,11 @@ void jpeg_encoder::write_jpeg_enc_buffer(ofstream &file, int numBytes) {
 }
 
 void jpeg_encoder::flush_jpeg_enc_buffer(ofstream &file) {
+    
+    // Stop if you are less than or equal 0
+    if(num_bytes_in_jpeg_enc_write_buffer <= 0) {
+        return;
+    }
     
     if (num_bytes_in_jpeg_enc_write_buffer > 0 && num_bytes_in_jpeg_enc_write_buffer <= JPEG_OUT_HEADER_SIZE) {
         file.write((char*)jpeg_enc_write_buffer, num_bytes_in_jpeg_enc_write_buffer);
