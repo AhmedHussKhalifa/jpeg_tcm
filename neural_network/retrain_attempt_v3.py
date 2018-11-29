@@ -551,7 +551,7 @@ def bias_variable(shape):
   variable_summaries(layer_biases)
   return layer_biases
 
-def nn_layer(input_tensor, input_dim, output_dim, layer_name, output_tensor_name, act=tf.nn.relu):
+def nn_layer(input_tensor, input_dim, output_dim, layer_name):
   """Reusable code for making a simple neural net layer.
   It does a matrix multiply, bias add, and then uses ReLU to nonlinearize.
   It also sets up name scoping so that the resultant graph is easy to read,
@@ -594,9 +594,16 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
     ground_truth_input = tf.placeholder(tf.float32,[None, class_count], name='GroundTruthInput')  
   #组织以下的ops作为‘final_training_ops’,这样在TensorBoard里更容易看到。  
   layer_name = 'final_training_ops'  
-  logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, 
-                    class_count, layer_name, final_tensor_name, tf.nn.softmax)
-
+  # logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, 
+  #                   class_count, layer_name, final_tensor_name, tf.nn.softmax)
+  
+  # Two Hidden layers:  
+  N = 500
+  layer_name = 'final_training_ops_1'  
+  hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, N, layer_name)
+  layer_name = 'final_training_ops_2'  
+  logits  = nn_layer(hidden1, N, class_count, layer_name)
+  
   final_tensor = tf.nn.softmax(logits, name=final_tensor_name)  
   tf.summary.histogram('activations', final_tensor)  
 
@@ -674,6 +681,12 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
       evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))  
       tf.summary.scalar('accuracy', evaluation_step)  
   return evaluation_step, prediction  
+
+"""
+Prints the variables inside the Graph.
+"""
+def printGraph():
+  [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
   
 #设置我们写入TensorBoard摘要的目录。  
 def main(_):  
@@ -793,8 +806,6 @@ def main(_):
                             list(image_lists.keys())[predictions[i]]))  
   
   # 写出训练的图像和以常数形式存储的权重标签。  
-  # hossam check
-  [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
   output_graph_def = graph_util.convert_variables_to_constants(  
       sess, graph.as_graph_def(), [FLAGS.final_tensor_name])  
   with gfile.FastGFile(FLAGS.output_graph, 'wb') as f:  
