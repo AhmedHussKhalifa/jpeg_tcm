@@ -1,27 +1,6 @@
-"""简单调用Inception V3_old架构模型的学习在tensorboard显示了摘要。 
- 
-这个例子展示了如何采取一个Inception V3_old架构模型训练ImageNet图像和训练新的顶层，可以识别其他类的图像。 
- 
-每个图像里，顶层接收作为输入的一个2048维向量。这表示顶层我们训练一个softmax层。假设softmax层包含n个标签，这对应于学习N + 2048 * N模型参数对应于学习偏差和权重。 
- 
-这里有一个例子，假设你有一个文件夹，里面是包含类名的子文件夹，每一个里面放置每个标签的图像。示例flower_photos文件夹应该有这样的结构： 
-~/flower_photos/daisy/photo1.jpg 
-~/flower_photos/daisy/photo2.jpg 
-... 
-~/flower_photos/rose/anotherphoto77.jpg 
-... 
-~/flower_photos/sunflower/somepicture.jpg 
-子文件夹的名字很重要，它们定义了每张图片的归类标签，而每张图片的名字是什么本身是没关系的。一旦你的图片准备好了，你可以使用如下命令启动训练: 
-bazel build tensorflow/examples/image_retraining:retrain && 
-bazel-bin/tensorflow/examples/image_retraining/retrain 
---image_dir ~/flower_photos 
- 
-你可以替换image_dir 参数为包含所需图片子文件夹的任何文件。每张图片的标签来自子文件夹的名字。 
-程序将产生一个新的模型文件用于任何TensorFlow项目的加载和运行，例如label_image样例代码。 
-为了使用 tensorboard。 
-默认情况下，脚本的日志摘要生成在./v3_old/retrain_logs目录 
-可以使用这个命令来可视化这些摘要: 
-tensorboard --logdir ./v3_old/retrain_logs 
+"""
+Attempt on Retrain 2048*10 FC for ML Project 
+Nov.28.2018
 """  
 from __future__ import absolute_import  
 from __future__ import division  
@@ -30,7 +9,7 @@ from __future__ import print_function
 import argparse  
 from datetime import datetime  
 import hashlib  
-import os.path  
+import os
 import random  
 import re  
 import struct  
@@ -48,31 +27,58 @@ from tensorflow.python.util import compat
   
 FLAGS = None  
   
-# 这些是所有的参数，我们使用这些参数绑定到特定的InceptionV3_old模型结构。  
-#这些包括张量名称和它们的尺寸。如果您想使此脚本与其他模型相适应，您将需要更新这些映射你在网络中使用的值。  
+# Inception V3 - 2015 Version On-line data parameters 
 # pylint：disable=line-too-long  
 DATA_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'  
 
 # pylint: enable=line-too-long  
 BOTTLENECK_TENSOR_NAME = 'pool_3/_reshape:0'  
-BOTTLENECK_TENSOR_SIZE = 2048  
 MODEL_INPUT_WIDTH = 299  
 MODEL_INPUT_HEIGHT = 299  
 MODEL_INPUT_DEPTH = 3  
 JPEG_DATA_TENSOR_NAME = 'DecodeJpeg/contents:0'  
 RESIZED_INPUT_TENSOR_NAME = 'ResizeBilinear:0'  
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M  
-  
-  
+NUMBER_OF_QUALITY_FACTORS = 10  
+START_QF = 10
+END_QF = 100
+BOTTLENECK_TENSOR_SIZE = 2048*(1 + NUMBER_OF_QUALITY_FACTORS)
+
+def load_gt():
+  # uid to id which we define as Ground Truth
+  label_lookup_path = '../Attempts/inception_model/imagenet_2012_challenge_label_map_proto.pbtxt'
+  # Load label look up file
+  proto_as_ascii = tf.gfile.GFile(label_lookup_path).readlines()
+  node_uid_to_id = {}
+  for line in proto_as_ascii:
+      if line.startswith('  target_class:'):
+          # Get number 1-1000
+          target_class = int(line.split(': ')[1])
+      if line.startswith('  target_class_string:'):
+          # Get UID n********
+          target_class_string = line.split(': ')[1]
+          # Save the relationship between number (1-1000) and the uid (n********)
+          node_uid_to_id[target_class_string[1:-2]] = target_class
+  return node_uid_to_id
+
 def create_image_lists(image_dir, testing_percentage, validation_percentage):  
-  """从文件系统生成训练图像列表。分析图像目录中的子文件夹，将其分割成稳定的训练、测试和验证集，并返回数据结构，描述每个标签及其路径的图像列表。 
-  Args： 
-    image_dir：一个包含图片子文件夹的文件夹的字符串路径。 
-    testing_percentage：预留测试图像的整数百分比。 
-    validation_percentage：预留验证图像的整数百分比。 
-  Returns： 
-    一个字典包含进入每一个标签的子文件夹和分割到每个标签的训练，测试和验证集的图像。 
-  """  
+  """Builds a list of training images from the file system.
+
+  Analyzes the sub folders in the image directory, splits them into stable
+  training, testing, and validation sets, and returns a data structure
+  describing the lists of images for each label and their paths.
+
+  Args:
+    image_dir: String path to a folder containing subfolders of images.
+    testing_percentage: Integer percentage of the images to reserve for tests.
+    validation_percentage: Integer percentage of images reserved for validation.
+
+  Returns:
+    An OrderedDict containing an entry for each label subfolder, with images
+    split into training, testing, and validation sets within each label.
+    The order of items defines the class indices.
+  """
+
   if not gfile.Exists(image_dir):  
     print("Image directory '" + image_dir + "' not found.")  
     return None  
@@ -85,10 +91,20 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
       is_root_dir = False  
       continue  
     extensions = ['jpg', 'jpeg', 'JPG', 'JPEG']  
-    file_list = []  
+    file_list = []
+
+    # print(node_uid_to_id)
+    # exit(0)
+    # class names
     dir_name = os.path.basename(sub_dir)  
+    # first_file = next(os.path.join(sub_dir, f) for f in os.listdir(sub_dir) if os.path.isfile(os.path.join(sub_dir, f)))
+    # uid = first_file.split('\\')[-1]
+    # uid = uid.split('_')[0]
+    # gt = str(node_uid_to_id[uid])
+
     if dir_name == image_dir:  
-      continue  
+      continue
+
     print("Looking for images in '" + dir_name + "'")  
     for extension in extensions:  
       file_glob = os.path.join(image_dir, dir_name, '*.' + extension)  
@@ -101,7 +117,8 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:  
       print('WARNING: Folder {} has more than {} images. Some images will '  
             'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))  
-    label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())  
+    # label_name = re.sub(r'[^a-z0-9]+', ' ', gt.lower())  
+    label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower()) 
     training_images = []  
     testing_images = []  
     validation_images = []  
@@ -127,21 +144,29 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
         'training': training_images,  
         'testing': testing_images,  
         'validation': validation_images,  
-    }  
+    }
+
+    # exit(0)
   return result  
   
   
 def get_image_path(image_lists, label_name, index, image_dir, category):  
-  """"返回给定索引中标签的图像路径。 
-  Args： 
-    image_lists：训练图像每个标签的词典。 
-    label_name：我们想得到的一个图像的标签字符串。 
-    index：我们想要图像的Int 偏移量。这将以标签的可用的图像数为模，因此它可以任意大。 
-    image_dir：包含训练图像的子文件夹的根文件夹字符串。 
-    category：从图像训练、测试或验证集提取的图像的字符串名称。 
-  Returns： 
-    将文件系统路径字符串映射到符合要求参数的图像。 
-  """  
+  """Returns a path to an image for a label at the given index.
+
+  Args:
+    image_lists: OrderedDict of training images for each label.
+    label_name: Label string we want to get an image for.
+    index: Int offset of the image we want. This will be moduloed by the
+    available number of images for the label, so it can be arbitrarily large.
+    image_dir: Root folder string of the subfolders containing the training
+    images.
+    category: Name string of set to pull images from - training, testing, or
+    validation.
+
+  Returns:
+    File system path string to an image that meets the requested parameters.
+
+  """
   if label_name not in image_lists:  
     tf.logging.fatal('Label does not exist %s.', label_name)  
   label_lists = image_lists[label_name]  
@@ -155,27 +180,67 @@ def get_image_path(image_lists, label_name, index, image_dir, category):
   base_name = category_list[mod_index]  
   sub_dir = label_lists['dir']  
   full_path = os.path.join(image_dir, sub_dir, base_name)  
-  return full_path  
+  return full_path
+
+def get_image_path_QF(image_lists, label_name, index, QF_dir, category , QF): 
+ """Returns a path to an image for a label at the given index and quality factor.
+
+  Args:
+    image_lists: OrderedDict of training images for each label.
+    label_name: Label string we want to get an image for.
+    index: Int offset of the image we want. This will be moduloed by the
+    available number of images for the label, so it can be arbitrarily large.
+    QF_dir: Root folder string of the subfolders containing the training
+    images with QF.
+    category: Name string of set to pull images from - training, testing, or
+    validation.
+    QF: Quality factor value
+  Returns:
+    File system path string to an image that meets the requested parameters.
+
+ """
+
+ if label_name not in image_lists:  
+  tf.logging.fatal('Label does not exist %s.', label_name)  
+ label_lists = image_lists[label_name]  
+ if category not in label_lists:  
+  tf.logging.fatal('Category does not exist %s.', category)  
+ category_list = label_lists[category]  
+ if not category_list:  
+  tf.logging.fatal('Label %s has no images in the category %s.',  
+                     label_name, category)  
+ mod_index = index % len(category_list) 
+ base_name = category_list[mod_index].split('.')[0]
+ middle = '-QF-'+ str(QF)+'.'
+ suffix = category_list[mod_index].split('.')[1]
+ qf_base_name =  base_name + middle + suffix
+ sub_dir = label_lists['dir']
+ full_path = os.path.join(QF_dir, sub_dir, qf_base_name)
+ return full_path
   
   
-def get_bottleneck_path(image_lists, label_name, index, bottleneck_dir,  
-                        category):  
-  """"返回给定索引中的标签的瓶颈文件的路径。 
-  Args： 
-    image_lists：训练图像每个标签的词典。 
-    label_name：我们想得到的一个图像的标签字符串。 
-    index：我们想要图像的Int 偏移量。这将以标签的可用的图像数为模，因此它可以任意大。 
-    bottleneck_dir：文件夹字符串保持缓存文件的瓶颈值。 
-    category：从图像训练、测试或验证集提取的图像的字符串名称。 
-  Returns： 
-    将文件系统路径字符串映射到符合要求参数的图像。 
-  """  
+def get_bottleneck_path(image_lists, label_name, index, bottleneck_dir, category):  
+  """Returns a path to a bottleneck file for a label at the given index.
+
+  Args:
+    image_lists: OrderedDict of training images for each label.
+    label_name: Label string we want to get an image for.
+    index: Integer offset of the image we want. This will be moduloed by the
+    available number of images for the label, so it can be arbitrarily large.
+    bottleneck_dir: Folder string holding cached files of bottleneck values.
+    category: Name string of set to pull images from - training, testing, or
+    validation.
+    module_name: The name of the image module being used.
+
+  Returns:
+    File system path string to an image that meets the requested parameters.
+  """
   return get_image_path(image_lists, label_name, index, bottleneck_dir,  
                         category) + '.txt'  
   
-""""从保存的GraphDef文件创建一个图像并返回一个图像对象。 
+""""Utilized saved GraphDef to create a graph
   Returns： 
-    我们将操作的持有训练的Inception网络和各种张量的图像。 
+    Inception Graph with in var, para and tensors 
 """    
 def create_inception_graph():  
   
@@ -189,24 +254,40 @@ def create_inception_graph():
           tf.import_graph_def(graph_def, name='', return_elements=[  
               BOTTLENECK_TENSOR_NAME, JPEG_DATA_TENSOR_NAME,  
               RESIZED_INPUT_TENSOR_NAME]))  
-  return sess.graph, bottleneck_tensor, jpeg_data_tensor, resized_input_tensor  
+  return sess.graph, bottleneck_tensor, jpeg_data_tensor, resized_input_tensor 
+
   
-  """在图像上运行推理以提取“瓶颈”摘要层。 
-  Args： 
-    sess：当前活动的tensorflow会话。 
-    image_data：原JPEG数据字符串。 
-    image_data_tensor：图中的输入数据层。 
-    bottleneck_tensor：最后一个softmax之前的层。 
-  Returns： 
-    NumPy数组的瓶颈值。 
+  """Runs inference on an image to extract the 'bottleneck' summary layer.
+  Args:
+    sess: Current active TensorFlow Session.
+    image_data: String of raw JPEG data.
+    image_data_tensor: Input data layer in the graph.
+    decoded_image_tensor: Output of initial image resizing and preprocessing.
+    resized_input_tensor: The input node of the recognition graph.
+    bottleneck_tensor: Layer before the final softmax.
+
+  Returns:
+    Numpy array of bottleneck values.
   """ 
-def run_bottleneck_on_image(sess, image_data, image_data_tensor, bottleneck_tensor):  
-  bottleneck_values = sess.run(bottleneck_tensor, {image_data_tensor: image_data})  
-  bottleneck_values = np.squeeze(bottleneck_values)  
+def run_bottleneck_on_image(sess, image_data_org, image_data_QF,image_data_tensor, bottleneck_tensor):  
+  bottleneck_values = sess.run(bottleneck_tensor, {image_data_tensor: image_data_org})  
+  bottleneck_values = np.squeeze(bottleneck_values) 
+
+  # QF 
+  counter = 0
+  for QF in range(100, -10, 1):
+    # 10 QF picture
+    bottleneck_values_QF = sess.run(bottleneck_tensor, {image_data_tensor: image_data_QF[counter]})  
+    bottleneck_values_QF = np.squeeze(bottleneck_values_QF)
+    bottleneck_values = np.concatenate((bottleneck_values,bottleneck_values_QF), axis = None)
+    counter += 1
+
+  # bottleneck_values = np.concatenate((bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,
+  #     bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values), axis = None)
+
   return bottleneck_values  
   
-"""下载并提取模型的tar文件。 
-    如果我们使用的pretrained模型已经不存在，这个函数会从tensorflow.org网站下载它并解压缩到一个目录。 
+"""Download tar for Inception V3 - 2015
   """   
 def maybe_download_and_extract():  
   dest_directory = FLAGS.model_dir  
@@ -230,28 +311,28 @@ def maybe_download_and_extract():
     print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')  
   tarfile.open(filepath, 'r:gz').extractall(dest_directory)  
   
-"""确保文件夹已经在磁盘上存在。 
-  Args: 
-    dir_name: 我们想创建的文件夹路径的字符串。 
-  """  
+"""Makes sure the folder exists on disk.
+Args:
+  dir_name: Path string to the folder we want to create.
+"""  
 def ensure_dir_exists(dir_name):  
   if not os.path.exists(dir_name):  
     os.makedirs(dir_name)  
   
-"""从一个给定的文件读取floats列表。 
+"""write floats from a specific file 
 Args:  
-   file_path: floats列表文件存储的的路径。 
-Returns: 瓶颈值的数组 (floats列表)。 
- """    
+   file_path: floats file path。 
+Returns: Numpy array of bottleneck values.
+"""    
 def write_list_of_floats_to_file(list_of_floats , file_path):  
   s = struct.pack('d' * BOTTLENECK_TENSOR_SIZE, *list_of_floats)  
   with open(file_path, 'wb') as f:  
     f.write(s)  
   
-"""从一个给定的文件读取floats列表。 
+"""read floats from a specific file 
 Args:  
-   file_path: floats列表文件存储的的路径。 
-Returns: 瓶颈值的数组 (floats列表)。 
+   file_path: floats file path。 
+Returns: Numpy array of bottleneck values.
 """    
 def read_list_of_floats_from_file(file_path):   
   with open(file_path, 'rb') as f:  
@@ -262,41 +343,63 @@ def read_list_of_floats_from_file(file_path):
 bottleneck_path_2_bottleneck_values = {}  
   
 def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,  
-                           image_dir, category, sess, jpeg_data_tensor, bottleneck_tensor):  
+                           image_dir, QF_dir, category, sess, jpeg_data_tensor, bottleneck_tensor):  
   print('Creating bottleneck at ' + bottleneck_path)  
   image_path = get_image_path(image_lists, label_name, index, image_dir, category)  
   if not gfile.Exists(image_path):  
     tf.logging.fatal('File does not exist %s', image_path)  
-  image_data = gfile.FastGFile(image_path, 'rb').read()  
-  bottleneck_values = run_bottleneck_on_image(sess, image_data, jpeg_data_tensor, bottleneck_tensor)  
+  image_data_org = gfile.FastGFile(image_path, 'rb').read()
+
+  # New for 10 QF pictures
+  counter = 0;
+  image_data_QF = [None]*NUMBER_OF_QUALITY_FACTORS
+  for QF in range(START_QF, END_QF, NUMBER_OF_QUALITY_FACTORS):
+    image_path_QF = get_image_path_QF(image_lists, label_name, index, QF_dir, category, QF)
+    # print (image_path ,'<-->', image_path_QF)
+    if not gfile.Exists(image_path):  
+      tf.logging.fatal('File does not exist %s', image_path)  
+    image_data_QF[counter] = gfile.FastGFile(image_path_QF, 'rb').read()
+    counter += 1
+
+  bottleneck_values = run_bottleneck_on_image(sess, image_data_org, image_data_QF, jpeg_data_tensor, bottleneck_tensor)  
   bottleneck_string = ','.join(str(x) for x in bottleneck_values)  
   with open(bottleneck_path, 'w') as bottleneck_file:  
     bottleneck_file.write(bottleneck_string)
 
-    """检索或计算图像的瓶颈值。 
-   如果磁盘上存在瓶颈数据的缓存版本，则返回，否则计算数据并将其保存到磁盘以备将来使用。 
- Args: 
-   sess:当前活动的tensorflow会话。 
-   image_lists：每个标签的训练图像的词典。 
-   label_name：我们想得到一个图像的标签字符串。 
-   index：我们想要的图像的整数偏移量。这将以标签图像的可用数为模，所以它可以任意大。 
-   image_dir：包含训练图像的子文件夹的根文件夹字符串。 
-   category：从图像训练、测试或验证集提取的图像的字符串名称。 
-   bottleneck_dir：保存着缓存文件瓶颈值的文件夹字符串。 
-   jpeg_data_tensor：满足加载的JPEG数据进入的张量。 
-   bottleneck_tensor：瓶颈值的输出张量。 
- Returns: 
-   通过图像的瓶颈层产生的NumPy数组值。 
-  """  
+  """Retrieves or calculates bottleneck values for an image.
+
+  If a cached version of the bottleneck data exists on-disk, return that,
+  otherwise calculate the data and save it to disk for future use.
+
+  Args:
+    sess: The current active TensorFlow Session.
+    image_lists: OrderedDict of training images for each label.
+    label_name: Label string we want to get an image for.
+    index: Integer offset of the image we want. This will be modulo-ed by the
+    available number of images for the label, so it can be arbitrarily large.
+    image_dir: Root folder string of the subfolders containing the training
+    images.
+    category: Name string of which set to pull images from - training, testing,
+    or validation.
+    bottleneck_dir: Folder string holding cached files of bottleneck values.
+    jpeg_data_tensor: The tensor to feed loaded jpeg data into.
+    decoded_image_tensor: The output of decoding and resizing the image.
+    resized_input_tensor: The input node of the recognition graph.
+    bottleneck_tensor: The output tensor for the bottleneck values.
+    module_name: The name of the image module being used.
+
+  Returns:
+    Numpy array of values produced by the bottleneck layer for the image.
+  """
   
-def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,category, bottleneck_dir, jpeg_data_tensor, bottleneck_tensor):
+def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir, QF_dir, category, bottleneck_dir, jpeg_data_tensor, bottleneck_tensor):
   label_lists = image_lists[label_name]  
   sub_dir = label_lists['dir']  
   sub_dir_path = os.path.join(bottleneck_dir, sub_dir)  
   ensure_dir_exists(sub_dir_path)  
   bottleneck_path = get_bottleneck_path(image_lists, label_name, index, bottleneck_dir, category)  
   if not os.path.exists(bottleneck_path):  
-    create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, category, sess, jpeg_data_tensor, bottleneck_tensor)  
+    create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
   with open(bottleneck_path, 'r') as bottleneck_file:  
     bottleneck_string = bottleneck_file.read()  
   did_hit_error = False  
@@ -306,7 +409,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,cat
     print("Invalid float found, recreating bottleneck")  
     did_hit_error = True  
   if did_hit_error:  
-    create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, category, sess, jpeg_data_tensor, bottleneck_tensor)  
+    create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
     with open(bottleneck_path, 'r') as bottleneck_file:  
       bottleneck_string = bottleneck_file.read()  
     #允许在这里传递异常，因为异常不应该发生在一个新的bottleneck创建之后。  
@@ -314,19 +417,31 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,cat
   return bottleneck_values  
 
 
-"""确保所有的训练，测试和验证瓶颈被缓存。 
-  因为我们可能会多次读取同一个图像（如果在训练中没有应用扭曲）。如果我们每个图像预处理期间的瓶颈层值只计算一次，在训练时只需反复读取这些缓存值，能大幅的加快速度。在这里，我们检测所有发现的图像，计算那些值，并保存。 
-  Args： 
-    sess：当前活动的tensorflow会话。 
-    image_lists：每个标签的训练图像的词典。 
-    image_dir：包含训练图像的子文件夹的根文件夹字符串。 
-    bottleneck_dir：保存着缓存文件瓶颈值的文件夹字符串。 
-    jpeg_data_tensor：从文件输入的JPEG数据的张量。 
-    bottleneck_tensor：图中的倒数第二输出层。 
-  Returns: 
-   无。 
-  """  
-def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir, jpeg_data_tensor, bottleneck_tensor): 
+"""Ensures all the training, testing, and validation bottlenecks are cached.
+
+  Because we're likely to read the same image multiple times (if there are no
+  distortions applied during training) it can speed things up a lot if we
+  calculate the bottleneck layer values once for each image during
+  preprocessing, and then just read those cached values repeatedly during
+  training. Here we go through all the images we've found, calculate those
+  values, and save them off.
+
+  Args:
+    sess: The current active TensorFlow Session.
+    image_lists: OrderedDict of training images for each label.
+    image_dir: Root folder string of the subfolders containing the training
+    images.
+    bottleneck_dir: Folder string holding cached files of bottleneck values.
+    jpeg_data_tensor: Input tensor for jpeg data from file.
+    decoded_image_tensor: The output of decoding and resizing the image.
+    resized_input_tensor: The input node of the recognition graph.
+    bottleneck_tensor: The penultimate output layer of the graph.
+    module_name: The name of the image module being used.
+
+  Returns:
+    Nothing.
+  """
+def cache_bottlenecks(sess, image_lists, image_dir, QF_dir, bottleneck_dir, jpeg_data_tensor, bottleneck_tensor): 
   how_many_bottlenecks = 0  
   ensure_dir_exists(bottleneck_dir)  
   for label_name, label_lists in image_lists.items():  
@@ -334,7 +449,7 @@ def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir, jpeg_data_te
       category_list = label_lists[category]  
       for index, unused_base_name in enumerate(category_list):  
         get_or_create_bottleneck(sess, image_lists, label_name, index,  
-                                 image_dir, category, bottleneck_dir,  
+                                 image_dir,QF_dir, category, bottleneck_dir,  
                                  jpeg_data_tensor, bottleneck_tensor)  
   
         how_many_bottlenecks += 1  
@@ -342,21 +457,35 @@ def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir, jpeg_data_te
           print(str(how_many_bottlenecks) + ' bottleneck files created.')  
   
 
-"""检索缓存图像的瓶颈值。 
-  如果没有应用扭曲，这个函数可以直接从磁盘检索图像缓存的瓶颈值。它从指定类别的图像挑选了一套随机的数据集。 
- Args： 
-   sess：当前活动的tensorflow会话。 
-   image_lists：每个标签的训练图像的词典。 
-   how_many：如果为正数，将选择一个随机样本的尺寸大小。如果为负数，则将检索所有瓶颈。 
-   category：从图像训练、测试或验证集提取的图像的字符串名称。 
-   bottleneck_dir：保存着缓存文件瓶颈值的文件夹字符串。 
-   image_dir：包含训练图像的子文件夹的根文件夹字符串。 
-   jpeg_data_tensor：JPEG图像数据导入的层。 
-   bottleneck_tensor：CNN图的瓶颈输出层。 
- Returns: 
-   瓶颈数组的列表，它们对应于ground truths和相关的文件名。 
- """  
-def get_random_cached_bottlenecks(sess, image_lists, how_many, category, bottleneck_dir, image_dir, jpeg_data_tensor, bottleneck_tensor):  
+"""Retrieves bottleneck values for cached images.
+
+  If no distortions are being applied, this function can retrieve the cached
+  bottleneck values directly from disk for images. It picks a random set of
+  images from the specified category.
+
+  Args:
+    sess: Current TensorFlow Session.
+    image_lists: OrderedDict of training images for each label.
+    how_many: If positive, a random sample of this size will be chosen.
+    If negative, all bottlenecks will be retrieved.
+    category: Name string of which set to pull from - training, testing, or
+    validation.
+    bottleneck_dir: Folder string holding cached files of bottleneck values.
+    image_dir: Root folder string of the subfolders containing the training
+    images.
+    QF_dir: Root folder string of the subfolders containing the quality factor versions
+    of the training images. 
+    jpeg_data_tensor: The layer to feed jpeg image data into.
+    decoded_image_tensor: The output of decoding and resizing the image.
+    resized_input_tensor: The input node of the recognition graph.
+    bottleneck_tensor: The bottleneck output layer of the CNN graph.
+    module_name: The name of the image module being used.
+
+  Returns:
+    List of bottleneck arrays, their corresponding ground truths, and the
+    relevant filenames.
+  """
+def get_random_cached_bottlenecks(sess, image_lists, how_many, category, bottleneck_dir, image_dir, QF_dir, jpeg_data_tensor, bottleneck_tensor):  
   class_count = len(image_lists.keys())  
   bottlenecks = []  
   ground_truths = []  
@@ -369,7 +498,7 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category, bottlen
       image_name = get_image_path(image_lists, label_name, image_index,  
                                   image_dir, category)  
       bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,  
-                                            image_index, image_dir, category,  
+                                            image_index, image_dir, QF_dir, category,  
                                             bottleneck_dir, jpeg_data_tensor,  
                                             bottleneck_tensor)  
       ground_truth = np.zeros(class_count, dtype=np.float32)  
@@ -378,14 +507,14 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category, bottlen
       ground_truths.append(ground_truth)  
       filenames.append(image_name)  
   else:  
-#检索所有的瓶颈。  
+    # Retrieve all bottlenecks.  
     for label_index, label_name in enumerate(image_lists.keys()):  
       for image_index, image_name in enumerate(  
           image_lists[label_name][category]):  
         image_name = get_image_path(image_lists, label_name, image_index,  
                                     image_dir, category)  
         bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,  
-                                              image_index, image_dir, category,  
+                                              image_index, image_dir,QF_dir, category,  
                                               bottleneck_dir, jpeg_data_tensor,  
                                               bottleneck_tensor)  
         ground_truth = np.zeros(class_count, dtype=np.float32)  
@@ -396,23 +525,30 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category, bottlen
   return bottlenecks, ground_truths, filenames  
   
 
-  """检索训练图像扭曲后的瓶颈值。 
-  如果我们训练使用扭曲变换，如裁剪，缩放，或翻转，我们必须重新计算每个图像的完整模型，所以我们不能使用缓存的瓶颈值。
-  相反，我们找出所要求类别的随机图像，通过扭曲图运行它们，然后得到每个瓶颈结果完整的图。
-  Args： 
-   sess：当前的tensorflow会话。 
-   image_lists：每个标签的训练图像的词典。 
-   how_many：返回瓶颈值的整数个数。 
-   category：要获取的图像训练、测试，或验证集的名称字符串。 
-   image_dir：包含训练图像的子文件夹的根文件夹字符串. 
-   input_jpeg_tensor：给定图像数据的输入层。 
-   distorted_image：畸变图形的输出节点。 
-   resized_input_tensor：识别图的输入节点。 
-   bottleneck_tensor：CNN图的瓶颈输出层。
-   Returns: 
-   瓶颈阵列及其对应的ground truths列表。 """
+  """Retrieves bottleneck values for training images, after distortions.
 
+  If we're training with distortions like crops, scales, or flips, we have to
+  recalculate the full model for every image, and so we can't use cached
+  bottleneck values. Instead we find random images for the requested category,
+  run them through the distortion graph, and then the full graph to get the
+  bottleneck results for each.
 
+  Args:
+    sess: Current TensorFlow Session.
+    image_lists: OrderedDict of training images for each label.
+    how_many: The integer number of bottleneck values to return.
+    category: Name string of which set of images to fetch - training, testing,
+    or validation.
+    image_dir: Root folder string of the subfolders containing the training
+    images.
+    input_jpeg_tensor: The input layer we feed the image data to.
+    distorted_image: The output node of the distortion graph.
+    resized_input_tensor: The input node of the recognition graph.
+    bottleneck_tensor: The bottleneck output layer of the CNN graph.
+
+  Returns:
+    List of bottleneck arrays and their corresponding ground truths.
+  """
 def get_random_distorted_bottlenecks(sess, image_lists, how_many, category, image_dir, input_jpeg_tensor,distorted_image, resized_input_tensor, bottleneck_tensor):  
  
   class_count = len(image_lists.keys())  
@@ -427,7 +563,9 @@ def get_random_distorted_bottlenecks(sess, image_lists, how_many, category, imag
     if not gfile.Exists(image_path):  
       tf.logging.fatal('File does not exist %s', image_path)  
   jpeg_data = gfile.FastGFile(image_path, 'rb').read()  
-  #注意我们实现distorted_image_data作为NumPy数组是在发送运行推理的图像之前。这涉及2个内存副本和可能在其他实现里优化。  
+  # Note that we materialize the distorted_image_data as a numpy array before
+  # sending running inference on the image. This involves 2 memory copies and
+  # might be optimized in other implementations.
   distorted_image_data = sess.run(distorted_image,{input_jpeg_tensor: jpeg_data})  
   bottleneck = run_bottleneck_on_image(sess, distorted_image_data,resized_input_tensor, bottleneck_tensor)  
   ground_truth = np.zeros(class_count, dtype=np.float32)  
@@ -436,57 +574,73 @@ def get_random_distorted_bottlenecks(sess, image_lists, how_many, category, imag
   ground_truths.append(ground_truth)  
   return bottlenecks, ground_truths  
   
-"""检索训练图像扭曲后的瓶颈值。 
-如果我们训练使用扭曲变换，如裁剪，缩放，或翻转，我们必须重新计算每个图像的完整模型，所以我们不能使用缓存的瓶颈值。相反，我们找出所要求类别的随机图像，通过扭曲图运行它们，然后得到每个瓶颈结果完整的图。 
-Args： 
-   sess：当前的tensorflow会话。 
-   image_lists：每个标签的训练图像的词典。 
-   how_many：返回瓶颈值的整数个数。 
-   category：要获取的图像训练、测试，或验证集的名称字符串。 
-   image_dir：包含训练图像的子文件夹的根文件夹字符串. 
-   input_jpeg_tensor：给定图像数据的输入层。 
-   distorted_image：畸变图形的输出节点。 
-   resized_input_tensor：识别图的输入节点。 
-   bottleneck_tensor：CNN图的瓶颈输出层。 
-Returns: 
-   瓶颈阵列及其对应的ground truths列表。 
-"""  
+"""Whether any distortions are enabled, from the input flags.
+
+Args:
+  flip_left_right: Boolean whether to randomly mirror images horizontally.
+  random_crop: Integer percentage setting the total margin used around the
+  crop box.
+  random_scale: Integer percentage of how much to vary the scale by.
+  random_brightness: Integer range to randomly multiply the pixel values by.
+
+Returns:
+Boolean value indicating whether any distortions should be applied.
+""" 
 def should_distort_images(flip_left_right, random_crop, random_scale, random_brightness):
   return (flip_left_right or (random_crop != 0) or (random_scale != 0) or (random_brightness != 0))  
   
-"""创建用于应用指定扭曲的操作。 
- 
-  在训练过程中，如果我们运行的图像通过简单的扭曲，如裁剪，缩放和翻转，可以帮助改进结果。这些反映我们期望在现实世界中的变化，因此可以帮助训练模型，以更有效地应对自然数据。在这里，我们采取的供应参数并构造一个操作网络以将它们应用到图像中。 
- 
- 裁剪 
- ~~~~~~~~ 
- 
- 裁剪是通过在完整的图像上一个随机的位置放置一个边界框。裁剪参数控制该框相对于输入图像的尺寸大小。如果它是零，那么该框以输入图像相同的大小作为输入不进行裁剪。如果值是50%，则裁剪框将是输入的宽度和高度的一半。在图中看起来像这样： 
- <       width         > 
-  +---------------------+ 
-  |                     | 
-  |   width - crop%     | 
-  |    <      >         | 
-  |    +------+         | 
-  |    |      |         | 
-  |    |      |         | 
-  |    |      |         | 
-  |    +------+         | 
-  |                     | 
-  |                     | 
-  +---------------------+ 
- 
- 缩放 
- ~~~~~~~ 
- 缩放是非常像裁剪，除了边界框总是在中心和它的大小在给定的范围内随机变化。例如，如果缩放比例百分比为零，则边界框与输入尺寸大小相同，没有缩放应用。如果它是50%，那么边界框将是宽度和高度的一半和全尺寸之间的随机范围。 
-Args： 
-   flip_left_right：是否随机镜像水平的布尔值。 
-   random_crop：在裁切框设置总的边缘的整数百分比。 
-   random_scale：缩放变化多少的整数百分比。 
-   random_brightness：随机像素值的整数范围。 
-Returns： 
-  JPEG输入层和扭曲结果的张量。 
-""" 
+"""Creates the operations to apply the specified distortions.
+
+During training it can help to improve the results if we run the images
+through simple distortions like crops, scales, and flips. These reflect the
+kind of variations we expect in the real world, and so can help train the
+model to cope with natural data more effectively. Here we take the supplied
+parameters and construct a network of operations to apply them to an image.
+
+Cropping
+~~~~~~~~
+
+Cropping is done by placing a bounding box at a random position in the full
+image. The cropping parameter controls the size of that box relative to the
+input image. If it's zero, then the box is the same size as the input and no
+cropping is performed. If the value is 50%, then the crop box will be half the
+width and height of the input. In a diagram it looks like this:
+
+<       width         >
++---------------------+
+|                     |
+|   width - crop%     |
+|    <      >         |
+|    +------+         |
+|    |      |         |
+|    |      |         |
+|    |      |         |
+|    +------+         |
+|                     |
+|                     |
++---------------------+
+
+Scaling
+~~~~~~~
+
+Scaling is a lot like cropping, except that the bounding box is always
+centered and its size varies randomly within the given range. For example if
+the scale percentage is zero, then the bounding box is the same size as the
+input and no scaling is applied. If it's 50%, then the bounding box will be in
+a random range between half the width and height and full size.
+
+Args:
+  flip_left_right: Boolean whether to randomly mirror images horizontally.
+  random_crop: Integer percentage setting the total margin used around the
+  crop box.
+  random_scale: Integer percentage of how much to vary the scale by.
+  random_brightness: Integer range to randomly multiply the pixel values by.
+  graph.
+  module_spec: The hub.ModuleSpec for the image module being used.
+
+Returns:
+  The jpeg input layer and the distorted result tensor.
+"""
 def add_input_distortions(flip_left_right, random_crop, random_scale,  
 random_brightness):   
   jpeg_data = tf.placeholder(tf.string, name='DistortJPGInput')  
@@ -523,7 +677,7 @@ random_brightness):
     distort_result = tf.expand_dims(brightened_image, 0, name='DistortResult')  
   return jpeg_data, distort_result  
   
-"""附加一个张量的很多总结（为tensorboard可视化）。""" 
+"""Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
 def variable_summaries(var):   
   with tf.name_scope('summaries'):  
     mean = tf.reduce_mean(var)  
@@ -572,7 +726,29 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name):
     return logits
 #################################################################
 
+"""Adds a new softmax and fully-connected layer for training and eval.
 
+We need to retrain the top layer to identify our new classes, so this function
+adds the right operations to the graph, along with some variables to hold the
+weights, and then sets up all the gradients for the backward pass.
+
+The set up for the softmax and fully-connected layers is based on:
+https://www.tensorflow.org/tutorials/mnist/beginners/index.html
+
+Args:
+  class_count: Integer of how many categories of things we're trying to
+      recognize.
+  final_tensor_name: Name string for the new final node that produces results.
+  bottleneck_tensor: The output of the main CNN graph.
+  quantize_layer: Boolean, specifying whether the newly added layer should be
+      instrumented for quantization with TF-Lite.
+  is_training: Boolean, specifying whether the newly add layer is for training
+      or eval.
+
+Returns:
+  The tensors for the training and cross entropy results, and tensors for the
+  bottleneck input and ground truth input.
+  """ 
 """为训练增加了一个新的softmax和全连接层。 
  我们需要重新训练顶层识别我们新的类，所以这个函数向图表添加正确的操作，以及一些变量来保持 
  权重，然后设置所有的梯度向后传递。 
@@ -593,17 +769,35 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
     bottleneck_input = tf.placeholder_with_default(bottleneck_tensor, shape=[None, BOTTLENECK_TENSOR_SIZE],name='BottleneckInputPlaceholder')  
     ground_truth_input = tf.placeholder(tf.float32,[None, class_count], name='GroundTruthInput')  
   #组织以下的ops作为‘final_training_ops’,这样在TensorBoard里更容易看到。  
-  layer_name = 'final_training_ops'  
-  # logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, 
-  #                   class_count, layer_name, final_tensor_name, tf.nn.softmax)
+
+  # One hidden layer (91.5% -> 92.1%)
+  # layer_name = 'final_training_ops'  
+  # logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, class_count, layer_name)
   
   # Two Hidden layers:  
-  N = 500
+  # N = 500
+  # layer_name = 'final_training_ops_1'  
+  # hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, N, layer_name)
+  # layer_name = 'final_training_ops_2'  
+  # logits  = nn_layer(hidden1, N, class_count, layer_name)
+
+  # Two Hidden layers with relu and drop out:  
+  N = 2000
   layer_name = 'final_training_ops_1'  
   hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, N, layer_name)
+  hidden1_tensor = tf.nn.relu(hidden1, name='hidden1_relu')
+
+  with tf.name_scope('dropout'):
+    # keep_prob = tf.placeholder(tf.float32)
+    keep_prob = tf.constant(0.5) 
+    tf.summary.scalar('dropout_keep_probability', keep_prob)
+    dropped = tf.nn.dropout(hidden1_tensor, keep_prob)
+
   layer_name = 'final_training_ops_2'  
-  logits  = nn_layer(hidden1, N, class_count, layer_name)
+  logits  = nn_layer(dropped, N, class_count, layer_name)
   
+  ####
+
   final_tensor = tf.nn.softmax(logits, name=final_tensor_name)  
   tf.summary.histogram('activations', final_tensor)  
 
@@ -622,55 +816,18 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,  
           final_tensor)  
 
-##########################
+##########################  
+  
+  """Inserts the operations we need to evaluate the accuracy of our results.
 
-# def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):  
-#   with tf.name_scope('input'):  
-#     bottleneck_input = tf.placeholder_with_default(bottleneck_tensor, shape=[None, BOTTLENECK_TENSOR_SIZE],name='BottleneckInputPlaceholder')  
-#     ground_truth_input = tf.placeholder(tf.float32,[None, class_count], name='GroundTruthInput')  
-# #组织以下的ops作为‘final_training_ops’,这样在TensorBoard里更容易看到。  
-#   layer_name = 'final_training_ops'  
-#   with tf.name_scope(layer_name):  
-#     with tf.name_scope('weights'):  
-#       layer_weights = tf.Variable(tf.truncated_normal([BOTTLENECK_TENSOR_SIZE, class_count], stddev=0.001), name='final_weights')  
-#       variable_summaries(layer_weights)  
-#     with tf.name_scope('biases'):  
-#       layer_biases = tf.Variable(tf.zeros([class_count]), name='final_biases')  
-#       variable_summaries(layer_biases)  
-#     with tf.name_scope('Wx_plus_b'):  
-#       logits = tf.matmul(bottleneck_input, layer_weights) + layer_biases  
-#       tf.summary.histogram('pre_activations', logits)  
-  
-#   final_tensor = tf.nn.softmax(logits, name=final_tensor_name)  
-#   tf.summary.histogram('activations', final_tensor)  
-  
-#   with tf.name_scope('cross_entropy'):  
-#     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(  
-#         labels=ground_truth_input, logits=logits)  
-#     with tf.name_scope('total'):  
-#       cross_entropy_mean = tf.reduce_mean(cross_entropy)  
-#   tf.summary.scalar('cross_entropy', cross_entropy_mean)  
-  
-#   with tf.name_scope('train'):  
-#     train_step = tf.train.GradientDescentOptimizer(FLAGS.learning_rate).minimize(  
-#         cross_entropy_mean)  
-  
-#   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,  
-#           final_tensor)  
-  
-  """为训练增加了一个新的softmax和全连接层。 
- 我们需要重新训练顶层识别我们新的类，所以这个函数向图表添加正确的操作，以及一些变量来保持 
- 权重，然后设置所有的梯度向后传递。 
- 
- softmax和全连接层的设置是基于： 
-  https://tensorflow.org/versions/master/tutorials/mnist/beginners/index.html 
- Args： 
-   class_count：我们需要识别多少种类东西的整数数目。 
-   final_tensor_name：产生结果时新的最后节点的字符串名称。 
-   bottleneck_tensor：主CNN图像的输出。 
- Returns： 
- 训练的张量和交叉熵的结果，瓶颈输入和groud truth输入的张量。 
- """  
+  Args:
+    result_tensor: The new final node that produces results.
+    ground_truth_tensor: The node we feed ground truth data
+    into.
+
+  Returns:
+    Tuple of (evaluation step, prediction).
+  """
 def add_evaluation_step(result_tensor, ground_truth_tensor):  
   with tf.name_scope('accuracy'):  
     with tf.name_scope('correct_prediction'):  
@@ -681,25 +838,36 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
       evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))  
       tf.summary.scalar('accuracy', evaluation_step)  
   return evaluation_step, prediction  
+   
+def main(_):
 
-"""
-Prints the variables inside the Graph.
-"""
-def printGraph():
-  [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
-  
-#设置我们写入TensorBoard摘要的目录。  
-def main(_):  
+  # Labels for imagenet:
+  # global node_uid_to_id
+  # node_uid_to_id = load_gt()
+
+  if not FLAGS.image_dir:
+    tf.logging.error('Must set flag --image_dir.')
+    return -1
+
   if tf.gfile.Exists(FLAGS.summaries_dir):  
     tf.gfile.DeleteRecursively(FLAGS.summaries_dir)  
     tf.gfile.MakeDirs(FLAGS.summaries_dir)  
   
-  #设置预训练图像。  
+  # Prepare Inception V3 Graph
   maybe_download_and_extract()  
-  graph, bottleneck_tensor, jpeg_data_tensor, resized_image_tensor = (create_inception_graph())  
+  graph, bottleneck_tensor, jpeg_data_tensor, resized_image_tensor = (create_inception_graph())
+
+
+  # Make the bottleneck tensor:
+  bottleneck_tensor = tf.concat([bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, 
+    bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor], 0)
+  print('New Shape of bottleneck tensor: ', tf.shape(bottleneck_tensor), bottleneck_tensor.get_shape())
+  bottleneck_tensor = tf.reshape(bottleneck_tensor, [1, BOTTLENECK_TENSOR_SIZE])
+  print('New Shape of bottleneck tensor: ', tf.shape(bottleneck_tensor), bottleneck_tensor.get_shape()) 
+
   
-  #查看文件夹结构，创建所有图像的列表。  
-  image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage, FLAGS.validation_percentage)  
+  # Look at the folder structure, and create lists of all the images.
+  image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage, FLAGS.validation_percentage)
   class_count = len(image_lists.keys())  
   if class_count == 0:  
     print('No valid folders of images found at ' + FLAGS.image_dir)  
@@ -708,29 +876,28 @@ def main(_):
     print('Only one valid folder of images found at ' + FLAGS.image_dir + ' - multiple classes are needed for classification.')  
     return -1  
   
-  #看命令行标记是否意味着我们应用任何扭曲操作。  
+  # See if the command-line flags mean we're applying any distortions.
   do_distort_images = should_distort_images(FLAGS.flip_left_right, FLAGS.random_crop, FLAGS.random_scale,FLAGS.random_brightness)  
   sess = tf.Session() 
 
-  # 我们将应用扭曲，因此设置我们需要的操作
+  # We will be applying distortions, so setup the operations we'll need.
   if do_distort_images:  
     distorted_jpeg_data_tensor, distorted_image_tensor = add_input_distortions(FLAGS.flip_left_right, FLAGS.random_crop, FLAGS.random_scale, FLAGS.random_brightness)  
   else:  
-    #我们确定计算bottleneck图像总结并缓存在磁盘上。  
-    cache_bottlenecks(sess, image_lists, FLAGS.image_dir, FLAGS.bottleneck_dir,  
+    # We'll make sure we've calculated the 'bottleneck' image summaries and cached them on disk.  
+    cache_bottlenecks(sess, image_lists, FLAGS.image_dir, FLAGS.QF_dir, FLAGS.bottleneck_dir,  
                       jpeg_data_tensor, bottleneck_tensor)  
-  
-  # 添加我们将要训练的新层。  
+
+  # Add the new layer that we'll be training.
   (train_step, cross_entropy, bottleneck_input, ground_truth_input,  
    final_tensor) = add_final_training_ops(len(image_lists.keys()),  
                                           FLAGS.final_tensor_name,  
                                           bottleneck_tensor)  
   
-  #创建操作，我们需要评估新层的准确性。  
+  # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step, prediction = add_evaluation_step(  
       final_tensor, ground_truth_input)  
-  
-  # 合并所有的摘要，写到./v3_old/retrain_logs(默认)。  
+  # # Merge all the summaries and write them out to the summaries_dir ./v3_mul/retrain_logs(default)。  
   merged = tf.summary.merge_all()  
   train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/train',  
                                        sess.graph)  
@@ -740,26 +907,29 @@ def main(_):
   init = tf.global_variables_initializer()  
   sess.run(init)  
   
-  # 按照命令行的要求运行多个周期的训练。  
+  # Run the training for as many cycles as requested on the command line.
   for i in range(FLAGS.how_many_training_steps):  
-    #获得一批输入瓶颈值，或是用应用的扭曲每一次计算新的值，或是缓存并存储在磁盘上的值。  
+    # Get a batch of input bottleneck values, either calculated fresh every time with distortions applied, or from the cache stored on disk.
     if do_distort_images:  
       train_bottlenecks, train_ground_truth = get_random_distorted_bottlenecks(  
           sess, image_lists, FLAGS.train_batch_size, 'training',  
-          FLAGS.image_dir, distorted_jpeg_data_tensor,  
+          FLAGS.image_dir, FLAGS.QF_dir, distorted_jpeg_data_tensor,  
           distorted_image_tensor, resized_image_tensor, bottleneck_tensor)  
     else:  
       train_bottlenecks, train_ground_truth, _ = get_random_cached_bottlenecks(  
           sess, image_lists, FLAGS.train_batch_size, 'training',  
-          FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,  
+          FLAGS.bottleneck_dir, FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
           bottleneck_tensor)  
-    # 给图像提供瓶颈和groud truth，运行一个训练阶。用‘合并’op计算训练的TensorBoard摘要。  
+    
+    
+    # Feed the bottlenecks and ground truth into the graph, and run a training
+    # step. Capture training summaries for TensorBoard with the `merged` op.
     train_summary, _ = sess.run([merged, train_step],  
              feed_dict={bottleneck_input: train_bottlenecks,  
                         ground_truth_input: train_ground_truth})  
     train_writer.add_summary(train_summary, i)  
   
-    #每隔一段时间，打印出来图像是如何训练的。  
+    # Every so often, print out how well the graph is training. 
     is_last_step = (i + 1 == FLAGS.how_many_training_steps)  
     if (i % FLAGS.eval_step_interval) == 0 or is_last_step:  
       train_accuracy, cross_entropy_value = sess.run(  
@@ -773,9 +943,9 @@ def main(_):
       validation_bottlenecks, validation_ground_truth, _ = (  
           get_random_cached_bottlenecks(  
               sess, image_lists, FLAGS.validation_batch_size, 'validation',  
-              FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,  
+              FLAGS.bottleneck_dir, FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
               bottleneck_tensor))  
-      # 运行一个验证阶。用‘合并’op计算训练的TensorBoard摘要。  
+      # Run a validation step and capture training summaries for TensorBoard with the `merged` op.
       validation_summary, validation_accuracy = sess.run(  
           [merged, evaluation_step],  
           feed_dict={bottleneck_input: validation_bottlenecks,  
@@ -783,13 +953,31 @@ def main(_):
       validation_writer.add_summary(validation_summary, i)  
       print('%s: Step %d: Validation accuracy = %.1f%% (N=%d)' %  
             (datetime.now(), i, validation_accuracy * 100,  
-             len(validation_bottlenecks)))  
+             len(validation_bottlenecks)))
+
+      # Hossam
+      # add mock testing
+      # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
+      test_bottlenecks, test_ground_truth, test_filenames = (  
+          get_random_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
+                                        'testing', FLAGS.bottleneck_dir,  
+                                        FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
+                                        bottleneck_tensor))  
+      test_accuracy, predictions = sess.run(  
+          [evaluation_step, prediction],  
+          feed_dict={bottleneck_input: test_bottlenecks,  
+                     ground_truth_input: test_ground_truth})  
+      if test_accuracy > 0.91:
+        print('Mock test accuracy = %.1f%% (N=%d)' % (  
+            test_accuracy * 100, len(test_bottlenecks)))  
+              
+
   
-  #我们已完成了所有的训练，在一些我们从未用过的新的图像上，运行一个最后的测试评估。  
+  # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
   test_bottlenecks, test_ground_truth, test_filenames = (  
       get_random_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
                                     'testing', FLAGS.bottleneck_dir,  
-                                    FLAGS.image_dir, jpeg_data_tensor,  
+                                    FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
                                     bottleneck_tensor))  
   test_accuracy, predictions = sess.run(  
       [evaluation_step, prediction],  
@@ -805,7 +993,7 @@ def main(_):
         print('%70s  %s' % (test_filename,  
                             list(image_lists.keys())[predictions[i]]))  
   
-  # 写出训练的图像和以常数形式存储的权重标签。  
+  # Write out the trained graph and labels with the weights stored as constants.
   output_graph_def = graph_util.convert_variables_to_constants(  
       sess, graph.as_graph_def(), [FLAGS.final_tensor_name])  
   with gfile.FastGFile(FLAGS.output_graph, 'wb') as f:  
@@ -821,29 +1009,35 @@ if __name__ == '__main__':
       type=str,  
       default='',  
       help='Path to folders of labeled images.'  
-  )  
+  )
+  parser.add_argument(  
+      '--QF_dir',  
+      type=str,  
+      default='',  
+      help='Path to folders of corresponding QF images.'  
+  )
   parser.add_argument(  
       '--output_graph',  
       type=str,  
-      default='./v3_old/output_graph.pb',  
+      default='./v3_mul/output_graph.pb',  
       help='Where to save the trained graph.'  
   )  
   parser.add_argument(  
       '--output_labels',  
       type=str,  
-      default='./v3_old/output_labels.txt',  
+      default='./v3_mul/output_labels.txt',  
       help='Where to save the trained graph\'s labels.'  
   )  
   parser.add_argument(  
       '--summaries_dir',  
       type=str,  
-      default='./v3_old/retrain_logs',  
+      default='./v3_mul/retrain_logs',  
       help='Where to save summary logs for TensorBoard.'  
   )  
   parser.add_argument(  
       '--how_many_training_steps',  
       type=int,  
-      default=40,  
+      default=4000,  
       help='How many training steps to run before ending.'  
   )  
   parser.add_argument(  
@@ -911,7 +1105,7 @@ if __name__ == '__main__':
   parser.add_argument(  
       '--model_dir',  
       type=str,  
-      default='./v3_old/imagenet',  
+      default='./v3_mul/imagenet',  
       help="""\
       Path to classify_image_graph_def.pb, 
       imagenet_synset_to_human_label_map.txt, and 
@@ -921,7 +1115,7 @@ if __name__ == '__main__':
   parser.add_argument(  
       '--bottleneck_dir',  
       type=str,  
-      default='./v3_old/bottleneck',  
+      default='./v3_mul/bottleneck',  
       help='Path to cache bottleneck layer values as files.'  
   )  
   parser.add_argument(  

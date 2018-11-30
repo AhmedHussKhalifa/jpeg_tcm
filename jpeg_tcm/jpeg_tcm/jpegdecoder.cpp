@@ -1230,6 +1230,8 @@ void jpeg_decoder::process_huffmann_data_unit_progressive(int currentComponent ,
             
             if (!found){
                 cout << "-|- ##ERROR## (DC case) Code value not found in Huffman table: " << endl;
+                // Log it
+                logErrorPictures();
                 return;
             }
             
@@ -1375,6 +1377,8 @@ void jpeg_decoder::process_huffmann_data_unit_progressive(int currentComponent ,
                         cout << ftell(fp) << endl;
                         cout << currentX << "  " << currentY;
                         cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
+                        // Log it
+                        logErrorPictures();
                         return;
                     }
                     
@@ -1567,6 +1571,8 @@ void jpeg_decoder::process_huffmann_data_unit_progressive(int currentComponent ,
                         cout << ftell(fp) << endl;
                         cout << currentX << "  " << currentY;
                         cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
+                        // Log it
+                        logErrorPictures();
                         return;
                     }
                     
@@ -1689,6 +1695,8 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent, int currentX
     
     if (!found){
         cout << "-|- ##ERROR## (DC case) Code value not found in Huffman table: " << endl;
+        // Log it
+        logErrorPictures();
         return;
     }
     
@@ -1795,6 +1803,8 @@ void jpeg_decoder::process_huffmann_data_unit(int currentComponent, int currentX
         
         if (!found){
             cout << "-|- ##ERROR## (AC case) Code value not found in Huffman table: " << endl;
+            // Log it
+            logErrorPictures();
             return;
         }
         
