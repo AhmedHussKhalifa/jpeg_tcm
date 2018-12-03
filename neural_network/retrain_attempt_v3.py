@@ -39,10 +39,17 @@ MODEL_INPUT_DEPTH = 3
 JPEG_DATA_TENSOR_NAME = 'DecodeJpeg/contents:0'  
 RESIZED_INPUT_TENSOR_NAME = 'ResizeBilinear:0'  
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M  
-NUMBER_OF_QUALITY_FACTORS = 10  
 START_QF = 10
-END_QF = 100
+END_QF = 100 + 10
+QF_STEP_SIZE = 10
+NUMBER_OF_QUALITY_FACTORS = int((END_QF - START_QF) / (QF_STEP_SIZE))
 BOTTLENECK_TENSOR_SIZE = 2048*(1 + NUMBER_OF_QUALITY_FACTORS)
+SIZE_OF_ONE_BOTTLENECK = int(BOTTLENECK_TENSOR_SIZE/(1 + NUMBER_OF_QUALITY_FACTORS))  
+
+# The location where variable checkpoints will be stored.
+CHECKPOINT_NAME = './v3_new/_retrain_checkpoint'
+
+
 
 def load_gt():
   # uid to id which we define as Ground Truth
@@ -124,11 +131,19 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     validation_images = []  
     for file_name in file_list:  
       base_name = os.path.basename(file_name)  
-     #当决定将图像放入哪个数据集时，我们想要忽略文件名里_nohash_之后的所有，数据集的创建者，有办法将有密切变化的图片分组。  
-     #例如：这是用于设置相同的叶子的多组图片的植物疾病的数据集。  
+      # We want to ignore anything after '_nohash_' in the file name when
+      # deciding which set to put an image in, the data set creator has a way of
+      # grouping photos that are close variations of each other. For example
+      # this is used in the plant disease data set to group multiple pictures of
+      # the same leaf.  
       hash_name = re.sub(r'_nohash_.*$', '', file_name)  
-     #这看起来有点不可思议，但是我们需要决定该文件是否应该进入训练、测试或验证集，我们要保持现有文件在同一数据集甚至更多的文件随后添加进来。  
-     #为了这样做，我们需要一个稳定的方式决定只是基于文件名本身，因此我们做一个哈希值，然后使用其产生一个概率值供我们使用分配。  
+      # This looks a bit magical, but we need to decide whether this file should
+      # go into the training, testing, or validation sets, and we want to keep
+      # existing files in the same set even if more files are subsequently
+      # added.
+      # To do that, we need a stable way of deciding based on just the file name
+      # itself, so we do a hash of that and then use that to generate a
+      # probability value that we use to assign it. 
       hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()  
       percentage_hash = ((int(hash_name_hashed, 16) %  
                           (MAX_NUM_IMAGES_PER_CLASS + 1)) *  
@@ -146,7 +161,9 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
         'validation': validation_images,  
     }
 
-    # exit(0)
+    # print('Training for %s is %d' % (label_name, len(training_images)))  
+    # print('Validation for %s is %d' % (label_name, len(validation_images)))  
+    # print('Testing for %s is %d' % (label_name, len(testing_images)))  
   return result  
   
   
@@ -260,7 +277,8 @@ def create_inception_graph():
   """Runs inference on an image to extract the 'bottleneck' summary layer.
   Args:
     sess: Current active TensorFlow Session.
-    image_data: String of raw JPEG data.
+    image_data_org: String of raw JPEG data.
+    image_data_QF: String of JPEG under quantization with a QF.
     image_data_tensor: Input data layer in the graph.
     decoded_image_tensor: Output of initial image resizing and preprocessing.
     resized_input_tensor: The input node of the recognition graph.
@@ -269,22 +287,24 @@ def create_inception_graph():
   Returns:
     Numpy array of bottleneck values.
   """ 
-def run_bottleneck_on_image(sess, image_data_org, image_data_QF,image_data_tensor, bottleneck_tensor):  
+def run_bottleneck_on_image(sess, image_data_org, image_data_QF, image_data_tensor, bottleneck_tensor):  
   bottleneck_values = sess.run(bottleneck_tensor, {image_data_tensor: image_data_org})  
   bottleneck_values = np.squeeze(bottleneck_values) 
+  bottleneck_values = bottleneck_values[0:SIZE_OF_ONE_BOTTLENECK]
+
 
   # QF 
   counter = 0
-  for QF in range(100, -10, 1):
+  for QF in range(START_QF, END_QF, QF_STEP_SIZE):
     # 10 QF picture
     bottleneck_values_QF = sess.run(bottleneck_tensor, {image_data_tensor: image_data_QF[counter]})  
     bottleneck_values_QF = np.squeeze(bottleneck_values_QF)
-    bottleneck_values = np.concatenate((bottleneck_values,bottleneck_values_QF), axis = None)
-    counter += 1
+    bottleneck_values_QF = bottleneck_values_QF[0:SIZE_OF_ONE_BOTTLENECK]
+    bottleneck_values = np.concatenate((bottleneck_values, bottleneck_values_QF), axis = None)
+    counter = counter + 1
 
   # bottleneck_values = np.concatenate((bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,
   #     bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values,bottleneck_values), axis = None)
-
   return bottleneck_values  
   
 """Download tar for Inception V3 - 2015
@@ -353,7 +373,7 @@ def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,
   # New for 10 QF pictures
   counter = 0;
   image_data_QF = [None]*NUMBER_OF_QUALITY_FACTORS
-  for QF in range(START_QF, END_QF, NUMBER_OF_QUALITY_FACTORS):
+  for QF in range(START_QF, END_QF, QF_STEP_SIZE):
     image_path_QF = get_image_path_QF(image_lists, label_name, index, QF_dir, category, QF)
     # print (image_path ,'<-->', image_path_QF)
     if not gfile.Exists(image_path):  
@@ -455,7 +475,6 @@ def cache_bottlenecks(sess, image_lists, image_dir, QF_dir, bottleneck_dir, jpeg
         how_many_bottlenecks += 1  
         if how_many_bottlenecks % 100 == 0:  
           print(str(how_many_bottlenecks) + ' bottleneck files created.')  
-  
 
 """Retrieves bottleneck values for cached images.
 
@@ -771,8 +790,8 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   #组织以下的ops作为‘final_training_ops’,这样在TensorBoard里更容易看到。  
 
   # One hidden layer (91.5% -> 92.1%)
-  # layer_name = 'final_training_ops'  
-  # logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, class_count, layer_name)
+  layer_name = 'final_training_ops'  
+  logits = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, class_count, layer_name)
   
   # Two Hidden layers:  
   # N = 500
@@ -781,20 +800,32 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   # layer_name = 'final_training_ops_2'  
   # logits  = nn_layer(hidden1, N, class_count, layer_name)
 
+  # One hidden layer with relu and drop out:
+  # layer_name = 'final_training_ops_1'  
+  # hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, class_count, layer_name)
+  # logits = tf.nn.relu(hidden1, name='hidden1_relu')
+
+  # with tf.name_scope('dropout'):
+  #   # keep_prob = tf.placeholder(tf.float32)
+  #   keep_prob = tf.constant(0.5) 
+  #   tf.summary.scalar('dropout_keep_probability', keep_prob)
+  #   dropped = tf.nn.dropout(logits, keep_prob)
+  
+
   # Two Hidden layers with relu and drop out:  
-  N = 2000
-  layer_name = 'final_training_ops_1'  
-  hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, N, layer_name)
-  hidden1_tensor = tf.nn.relu(hidden1, name='hidden1_relu')
+  # N = 2000
+  # layer_name = 'final_training_ops_1'  
+  # hidden1 = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, N, layer_name)
+  # hidden1_tensor = tf.nn.relu(hidden1, name='hidden1_relu')
 
-  with tf.name_scope('dropout'):
-    # keep_prob = tf.placeholder(tf.float32)
-    keep_prob = tf.constant(0.5) 
-    tf.summary.scalar('dropout_keep_probability', keep_prob)
-    dropped = tf.nn.dropout(hidden1_tensor, keep_prob)
+  # with tf.name_scope('dropout'):
+  #   # keep_prob = tf.placeholder(tf.float32)
+  #   keep_prob = tf.constant(0.5) 
+  #   tf.summary.scalar('dropout_keep_probability', keep_prob)
+  #   dropped = tf.nn.dropout(hidden1_tensor, keep_prob)
 
-  layer_name = 'final_training_ops_2'  
-  logits  = nn_layer(dropped, N, class_count, layer_name)
+  # layer_name = 'final_training_ops_2'  
+  # logits  = nn_layer(dropped, N, class_count, layer_name)
   
   ####
 
@@ -810,8 +841,11 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   tf.summary.scalar('cross_entropy', cross_entropy_mean)  
   
   with tf.name_scope('train'):  
+    # train_step = tf.train.AdamOptimizer(FLAGS.learning_rate).minimize(cross_entropy_mean)
     train_step = tf.train.GradientDescentOptimizer(FLAGS.learning_rate).minimize(  
-        cross_entropy_mean)  
+          cross_entropy_mean) 
+    # train_step = tf.train.GradientDescentOptimizer(FLAGS.learning_rate).minimize(  
+    #       cross_entropy_mean)        
   
   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,  
           final_tensor)  
@@ -907,6 +941,16 @@ def main(_):
   init = tf.global_variables_initializer()  
   sess.run(init)  
   
+
+  # Early stopping parameters:
+  best_v_error_so_far = np.inf                   # The best evaluation error observed thusfar
+  i_prime = 0 # The number of iterations for the output network.
+  number_steps_between_evaluation = 0 # int; Number of steps between evaluations.
+  # patience = 100  # "patience", the number of evaluations to observe worsening validataion set.
+  patience = 50  # "patience", the number of evaluations to observe worsening validataion set.
+
+
+
   # Run the training for as many cycles as requested on the command line.
   for i in range(FLAGS.how_many_training_steps):  
     # Get a batch of input bottleneck values, either calculated fresh every time with distortions applied, or from the cache stored on disk.
@@ -955,6 +999,61 @@ def main(_):
             (datetime.now(), i, validation_accuracy * 100,  
              len(validation_bottlenecks)))
 
+      # Early stopping
+
+      # The later iterations decrease the learning rate
+      later_iterations = 150
+      if i > later_iterations:
+        FLAGS.learning_rate *= 0.1
+
+      v_error_new = (1-validation_accuracy) * 100
+      # If better validation accuracy, then reset waiting time, save the network, and update the best error value
+      if v_error_new < best_v_error_so_far:
+        patience_iter = 0
+
+        # Save the model
+        # best_network_so_far = graph_util.convert_variables_to_constants(  
+        #               sess, graph.as_graph_def(), [FLAGS.final_tensor_name])  # The best network found thusfar
+        i_prime = i
+        best_v_error_so_far = v_error_new
+      # Otherwise, update the waiting time
+      else:
+        patience_iter += 1
+      
+      # Early stop!
+      print('Patience iterations so far is %d and best validation_accuracy %f' % (patience_iter, validation_accuracy))
+      if patience_iter >= patience:
+        # Train on the entire Training + Validation
+        train_bottlenecks, train_ground_truth, _ = get_random_cached_bottlenecks(  
+          sess, image_lists, -1, 'training',  
+          FLAGS.bottleneck_dir, FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
+          bottleneck_tensor)   
+
+        validation_bottlenecks, validation_ground_truth, _ = (  
+          get_random_cached_bottlenecks(  
+              sess, image_lists, -1, 'validation',  
+              FLAGS.bottleneck_dir, FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
+              bottleneck_tensor))
+
+        # Combine training and validation
+        big_train_bottle_necks = train_bottlenecks  + validation_bottlenecks
+        big_train_ground_truth = train_ground_truth + validation_ground_truth                
+
+        # print('Length of big train: ', len(big_train_bottle_necks));
+        # print('Length of big train gt: ', len(big_train_ground_truth))
+
+        train_accuracy, cross_entropy_value = sess.run(  
+          [evaluation_step, cross_entropy],  
+          feed_dict={bottleneck_input: big_train_bottle_necks,  
+                     ground_truth_input: big_train_ground_truth})  
+
+        print('%s: Step %d: Final Train accuracy = %.1f%%' % (datetime.now(), i,  
+                                                      train_accuracy * 100))  
+        print('%s: Step %d: Final Cross entropy = %f' % (datetime.now(), i,  
+                                                 cross_entropy_value))     
+        
+        break # stop epochs
+
       # Hossam
       # add mock testing
       # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
@@ -971,7 +1070,7 @@ def main(_):
         print('Mock test accuracy = %.1f%% (N=%d)' % (  
             test_accuracy * 100, len(test_bottlenecks)))  
               
-
+           
   
   # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
   test_bottlenecks, test_ground_truth, test_filenames = (  
@@ -1037,7 +1136,8 @@ if __name__ == '__main__':
   parser.add_argument(  
       '--how_many_training_steps',  
       type=int,  
-      default=4000,  
+      default=2000,  
+      # default=4000,  
       help='How many training steps to run before ending.'  
   )  
   parser.add_argument(  
