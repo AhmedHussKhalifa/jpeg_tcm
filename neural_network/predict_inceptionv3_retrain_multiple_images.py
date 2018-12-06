@@ -24,9 +24,9 @@ import multiprocessing
 
 LABE_LOOKUP_PATH = './inception_model/imagenet_2012_challenge_label_map_proto.pbtxt'  
 UID_LOOKUP_PATH  = './inception_model/imagenet_synset_to_human_label_map.txt'
-PATH_TO_PB_GRAPH = './inception_model/classify_image_graph_def.pb'
 PATH_TO_TEST_IMAGES = '/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inceptionv3_flowers_QF_regularization/flower_photos/roses/' 
 PATH_TO_BOTTLENECK_GRAPH = '/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/classify_image_graph_def.pb'
+PATH_TO_PB_GRAPH = '/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inceptionv3_flowers_QF_regularization/v3_mul_imageNet/output_graph.pb'
 
 # Model constants
 BOTTLENECK_TENSOR_NAME = 'pool_3/_reshape:0'  
@@ -114,12 +114,25 @@ def create_inception_graph():
   return sess.graph, bottleneck_tensor, jpeg_data_tensor, resized_input_tensor
 
 #读取训练好的Inception-v3模型来创建graph
-def create_graph():
-  # the class that's been created from the textual definition in graph.proto
-	with tf.gfile.FastGFile(PATH_TO_PB_GRAPH, 'rb') as f:  
-		graph_def = tf.GraphDef()
-		graph_def.ParseFromString(f.read())
-		tf.import_graph_def(graph_def, name='')
+def load_trained_graph():  
+  model_filename = PATH_TO_PB_GRAPH
+  with tf.Session() as sess:  
+    with gfile.FastGFile(model_filename, 'rb') as f:
+      graph_def = tf.GraphDef()
+      graph_def.ParseFromString(f.read())
+      # Restore the graph. 
+      with tf.Graph().as_default() as graph:
+      	tf.import_graph_def(graph_def, name="")
+  # return graph and not session.graph
+  return graph
+
+
+# def create_graph():
+#   # the class that's been created from the textual definition in graph.proto
+# 	with tf.gfile.FastGFile(PATH_TO_PB_GRAPH, 'rb') as f:  
+# 		graph_def = tf.GraphDef()
+# 		graph_def.ParseFromString(f.read())
+# 		tf.import_graph_def(graph_def, name='')
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Hide the warning information from Tensorflow - annoying...
 
@@ -377,11 +390,74 @@ def run_bottleneck_on_image(sess, image_data_org, image_data_QF, image_data_tens
   bottleneck_values = sess.run(bottleneck_tensor, {image_data_tensor: image_data_org})  
   bottleneck_values = np.squeeze(bottleneck_values)  
 
-  # QF versions
+  # QF versions in parallel
   results = Parallel(n_jobs=NUMBER_OF_QUALITY_FACTORS, verbose=0, backend='threading')(delayed(run_bottleneck_on_image_QF)
     (sess, bottleneck_values, image_data_QF, image_data_tensor, bottleneck_tensor, qf_counter) for qf_counter in range(NUMBER_OF_QUALITY_FACTORS))  
 
-  return bottleneck_values  
+  return bottleneck_values
+
+
+def add_evaluation_step(result_tensor, ground_truth_tensor):  
+  with tf.name_scope('accuracy'):  
+    with tf.name_scope('correct_prediction'):  
+      prediction = tf.argmax(result_tensor, 1)
+      correct_prediction = tf.equal(  
+      prediction, tf.argmax(ground_truth_tensor, 1))
+    with tf.name_scope('accuracy'):  
+      evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))  
+      tf.summary.scalar('accuracy', evaluation_step)  
+  return evaluation_step, prediction  
+
+
+
+def get_test_cached_bottlenecks(sess, image_lists, how_many, category, bottleneck_dir, image_dir, QF_dir, jpeg_data_tensor, bottleneck_tensor):  
+  class_count = len(image_lists.keys())  
+  bottlenecks = []  
+  ground_truths = []  
+  filenames = []  
+  if how_many >= 0:  #检索瓶颈的一个随机样本。  
+    for unused_i in range(how_many):  
+      label_index = random.randrange(class_count)  
+      label_name = list(image_lists.keys())[label_index]  
+      image_index = random.randrange(MAX_NUM_IMAGES_PER_CLASS + 1)  
+      image_name = get_image_path(image_lists, label_name, image_index,  
+                                  image_dir, category)  
+      bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,  
+                                            image_index, image_dir, QF_dir, category,  
+                                            bottleneck_dir, jpeg_data_tensor,  
+                                            bottleneck_tensor)  
+      ground_truth = np.zeros(class_count, dtype=np.float32)  
+      ground_truth[label_index] = 1.0  
+      bottlenecks.append(bottleneck)  
+      ground_truths.append(ground_truth)  
+      filenames.append(image_name)  
+  else:  
+    # Retrieve all bottlenecks.  
+    for label_index, label_name in enumerate(image_lists.keys()):  
+      for image_index, image_name in enumerate(  
+          image_lists[label_name][category]):  
+        image_name = get_image_path(image_lists, label_name, image_index,  
+                                    image_dir, category)  
+        bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,  
+                                              image_index, image_dir,QF_dir, category,  
+                                              bottleneck_dir, jpeg_data_tensor,  
+                                              bottleneck_tensor)  
+        ground_truth = np.zeros(class_count, dtype=np.float32)  
+        ground_truth[label_index] = 1.0  
+        bottlenecks.append(bottleneck)  
+        ground_truths.append(ground_truth)  
+        filenames.append(image_name)  
+  return bottlenecks, ground_truths, filenames
+
+
+"""
+Prints the variables inside the Graph.
+"""
+def printGraph():
+  [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
+
+def printGraph(g):
+  [print(n.name) for n in g.as_graph_def().node]
 
 def main(_):
 
@@ -402,9 +478,7 @@ def main(_):
     bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor], 0)
     bottleneck_tensor = tf.reshape(bottleneck_tensor, [1, BOTTLENECK_TENSOR_SIZE])
     # print('New Shape of bottleneck tensor: ', tf.shape(bottleneck_tensor), bottleneck_tensor.get_shape()) 
-    # Create the Graph
-    # create_graph()
-
+    
     # bottleneck_tensor = tf.concat([bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor,
     # bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor], 0)
     # bottleneck_tensor = tf.reshape(bottleneck_tensor, [1, BOTTLENECK_TENSOR_SIZE])
@@ -430,40 +504,65 @@ def main(_):
             + ' - multiple classes are needed for classification.')
         return -1
 
-    # See if the command-line flags mean we're applying any distortions.
-    print ('Stop!')
-    return -1
+    # Reset the default graph (Switch it!)
+    tf.reset_default_graph()
+    
+    # Load the new graph
+    graph = load_trained_graph()
+    final_tensor = graph.get_tensor_by_name(FLAGS.final_tensor_name + ':0')
 
+    # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
+    test_bottlenecks, test_ground_truth, test_filenames = (  
+      get_test_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
+                                    'testing', FLAGS.bottleneck_dir,  
+                                    FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
+                                    bottleneck_tensor))
+
+
+    # printGraph(graph)
+    # Create the operations we need to evaluate the accuracy of our new layer.
+    evaluation_step, prediction = add_evaluation_step(  
+      final_tensor, test_ground_truth)
+
+    print(prediction)
+    return -1
+    
+    # Test!
+    test_accuracy, predictions = sess.run(  
+      [evaluation_step, prediction],  
+      feed_dict={bottleneck_input: test_bottlenecks,  
+                 ground_truth_input: test_ground_truth})
+
+    print('Final test accuracy = %.1f%% (N=%d)' % (  
+      test_accuracy * 100, len(test_bottlenecks)))  
+
+    # print(predictions)
+
+
+    return -1
+   #  test_bottlenecks, test_ground_truth, test_filenames = (  
+   #    get_test_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
+   #                                  'testing', FLAGS.bottleneck_dir,  
+   #                                  FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
+   #                                  bottleneck_tensor))
+
+   #  test_accuracy, predictions = sess.run(  
+   #    [evaluation_step, prediction],  
+   #    feed_dict={bottleneck_input: test_bottlenecks,  
+   #               ground_truth_input: test_ground_truth})  
+   #  print('Final test accuracy = %.1f%% (N=%d)' % (  
+   #    test_accuracy * 100, len(test_bottlenecks)))  
+  
+   # if FLAGS.print_misclassified_test_images:  
+   #  print('=== MISCLASSIFIED TEST IMAGES ===')  
+   #  for i, test_filename in enumerate(test_filenames):  
+   #    if predictions[i] != test_ground_truth[i].argmax():  
+   #      print('%70s  %s' % (test_filename,  
+   #                          list(image_lists.keys())[predictions[i]]))
+    ### TEST
+        
     jpegList = os.listdir(rootdir)
     how_many_sorted_predictions = -5
-
-    for jpegImage in jpegList:
-        jpegImageFileName = os.path.join(PATH_TO_TEST_IMAGES, jpegImage)
-
-        # if file exists
-
-        if os.path.isfile(path):
-
-            # Read the image file in Tf lib |decode style of the photo: 'rb' = non-UTF-8; 'r' = UTF-8
-            image_data = tf.gfile.FastGFile(jpegImageFileName, 'rb'
-                    ).read()
-
-            # ID --> English string label.
-
-        node_lookup = NodeLookup()
-
-        Label = [1, 2, 3]
-        top_N = predictions.argsort()[how_many_sorted_predictions:][::
-                -1]
-        counter = counter + 1
-        rank = 0
-
-        for node_id in top_5:
-            human_string = node_lookup.id_to_string(node_id)
-            score = predictions[node_id]
-            print ('%s (score = %.5f)' % (human_string, score))
-
-                # if(Label[counter] == human_string):
 
     # Close the session
     sess.close()
@@ -518,7 +617,18 @@ if __name__ == '__main__':
       help="""\
       The name of the output classification layer in the retrained graph.\
       """  
-  )  
+  )
+  parser.add_argument(  
+      '--test_batch_size',  
+      type=int,  
+      default=-1,  
+      help="""\
+      How many images to test on. This test set is only used once, to evaluate 
+      the final accuracy of the model after training completes. 
+      A value of -1 causes the entire test set to be used, which leads to more 
+      stable results across runs.\
+      """  
+  )
   FLAGS, unparsed = parser.parse_known_args()  
 tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)  
 
