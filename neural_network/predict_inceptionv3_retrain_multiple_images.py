@@ -21,6 +21,9 @@ from joblib import Parallel, delayed
 import requests
 import multiprocessing
 
+# get Max
+import operator
+
 
 LABE_LOOKUP_PATH = './inception_model/imagenet_2012_challenge_label_map_proto.pbtxt'  
 UID_LOOKUP_PATH  = './inception_model/imagenet_synset_to_human_label_map.txt'
@@ -459,6 +462,30 @@ def printGraph():
 def printGraph(g):
   [print(n.name) for n in g.as_graph_def().node]
 
+
+def printGraphOps(g):
+	# We can verify that we can access the list of operations in the graph
+  for op in g.get_operations():
+  	print(op.name)
+
+def calcTop1Rate(ground_truth_input, predictions):
+
+  # Remove one hot representation (code to be improved)
+  gt = []
+  for i in range(len(ground_truth_input)):
+  	index, value = max(enumerate(ground_truth_input[i]), key=operator.itemgetter(1))
+  	gt.append(index)
+
+  # Count the number of matches
+  gt = np.array(gt)
+  pred = np.array(predictions)
+  equal_count = np.count_nonzero(gt==pred)
+
+
+  total_length = len(ground_truth_input)
+  top1_rate = 100.0*equal_count/total_length
+  return equal_count, top1_rate, gt, pred
+
 def main(_):
 
     # Prepare Inception V3 Graph
@@ -479,9 +506,6 @@ def main(_):
     bottleneck_tensor = tf.reshape(bottleneck_tensor, [1, BOTTLENECK_TENSOR_SIZE])
     # print('New Shape of bottleneck tensor: ', tf.shape(bottleneck_tensor), bottleneck_tensor.get_shape()) 
     
-    # bottleneck_tensor = tf.concat([bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor,
-    # bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor, bottleneck_tensor], 0)
-    # bottleneck_tensor = tf.reshape(bottleneck_tensor, [1, BOTTLENECK_TENSOR_SIZE])
 
     # Look at the folder structure, and create lists of all the images
     image_lists = create_test_image_lists(FLAGS.image_dir)
@@ -511,58 +535,39 @@ def main(_):
     graph = load_trained_graph()
     final_tensor = graph.get_tensor_by_name(FLAGS.final_tensor_name + ':0')
 
-    # We've completed all our training, so run a final test evaluation on some new images we haven't used before.
+
+    # Get test bottlenecks
     test_bottlenecks, test_ground_truth, test_filenames = (  
       get_test_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
                                     'testing', FLAGS.bottleneck_dir,  
                                     FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
                                     bottleneck_tensor))
 
-
     # printGraph(graph)
-    # Create the operations we need to evaluate the accuracy of our new layer.
-    evaluation_step, prediction = add_evaluation_step(  
-      final_tensor, test_ground_truth)
+    # printGraphOps(graph)
 
-    print(prediction)
-    return -1
-    
-    # Test!
-    test_accuracy, predictions = sess.run(  
-      [evaluation_step, prediction],  
+    # Get necessary operations to run the graph
+    prediction = graph.get_tensor_by_name('accuracy/correct_prediction/ArgMax:0')
+    evaluation_step = graph.get_tensor_by_name('accuracy/accuracy/accuracy:0')
+    ground_truth_input = graph.get_tensor_by_name('input/GroundTruthInput:0')
+    bottleneck_input = graph.get_tensor_by_name('input/BottleneckInputPlaceholder:0')
+
+    # We launch a Session -- Output after softmax
+    #with tf.Session(graph=graph) as sess:
+    #	predictions = sess.run(final_tensor, {'input/BottleneckInputPlaceholder:0': test_bottlenecks})
+   # 	print(predictions)
+
+    # We launch a Session
+    with tf.Session(graph=graph) as sess:
+    	test_accuracy, predictions = sess.run([evaluation_step, prediction],  
       feed_dict={bottleneck_input: test_bottlenecks,  
                  ground_truth_input: test_ground_truth})
 
-    print('Final test accuracy = %.1f%% (N=%d)' % (  
-      test_accuracy * 100, len(test_bottlenecks)))  
+    	matches, top1Rate, gt_labels, pred_labels = calcTop1Rate(test_ground_truth, predictions)
+    	print('Final Top-1 Rate = %.1f%% (N=%d)' % (top1Rate, len(test_bottlenecks)))
 
-    # print(predictions)
-
-
-    return -1
-   #  test_bottlenecks, test_ground_truth, test_filenames = (  
-   #    get_test_cached_bottlenecks(sess, image_lists, FLAGS.test_batch_size,  
-   #                                  'testing', FLAGS.bottleneck_dir,  
-   #                                  FLAGS.image_dir, FLAGS.QF_dir, jpeg_data_tensor,  
-   #                                  bottleneck_tensor))
-
-   #  test_accuracy, predictions = sess.run(  
-   #    [evaluation_step, prediction],  
-   #    feed_dict={bottleneck_input: test_bottlenecks,  
-   #               ground_truth_input: test_ground_truth})  
-   #  print('Final test accuracy = %.1f%% (N=%d)' % (  
-   #    test_accuracy * 100, len(test_bottlenecks)))  
-  
-   # if FLAGS.print_misclassified_test_images:  
-   #  print('=== MISCLASSIFIED TEST IMAGES ===')  
-   #  for i, test_filename in enumerate(test_filenames):  
-   #    if predictions[i] != test_ground_truth[i].argmax():  
-   #      print('%70s  %s' % (test_filename,  
-   #                          list(image_lists.keys())[predictions[i]]))
-    ### TEST
-        
-    jpegList = os.listdir(rootdir)
-    how_many_sorted_predictions = -5
+    	# Calculate the top-5 rate later
+    	how_many_sorted_predictions = -5
 
     # Close the session
     sess.close()
@@ -632,4 +637,6 @@ if __name__ == '__main__':
   FLAGS, unparsed = parser.parse_known_args()  
 tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)  
 
+# Run:
+# time python3 predict_inceptionv3_retrain_multiple_images.py --image_dir inceptionv3_flowers_QF_regularization/5classes_val/org/ --QF_dir inceptionv3_flowers_QF_regularization/5classes_val/QF/ --bottleneck_dir inceptionv3_flowers_QF_regularization/v3_mul_imageNet_test/bottleneck/
 
