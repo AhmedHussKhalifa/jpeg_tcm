@@ -476,6 +476,14 @@ def calcTop1Rate(ground_truth_input, predictions):
   top1_rate = 100.0*equal_count/total_length
   return equal_count, top1_rate, gt, pred
 
+def printWrongPredictions(test_filenames, test_ground_truth, predictions, image_lists):
+  print('Wrong Predictions List:')
+  for i, test_filename in enumerate(test_filenames):
+  	if predictions[i] != test_ground_truth[i].argmax():
+  		print('%70s  %s' % (test_filename,  
+                            list(image_lists.keys())[predictions[i]]))
+
+
 def main(_):
 
     # Prepare Inception V3 Graph
@@ -554,7 +562,15 @@ def main(_):
                  ground_truth_input: test_ground_truth})
 
     	matches, top1Rate, gt_labels, pred_labels = calcTop1Rate(test_ground_truth, predictions)
-    	print('Final Top-1 Rate = %.1f%% (N=%d)' % (top1Rate, len(test_bottlenecks)))
+
+		# print misclassified instances
+    	printWrongPredictions(test_filenames, test_ground_truth, predictions, image_lists)
+    	
+    	# print (pred_labels)
+    	# print (gt_labels)
+    	print('Final Top-1 Rate = %.1f%% (%d/%d)' % (top1Rate, matches, len(test_bottlenecks)))
+
+    	
 
     	# Calculate the top-5 rate later
     	how_many_sorted_predictions = -5
