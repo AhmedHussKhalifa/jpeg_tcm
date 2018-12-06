@@ -31,3 +31,7 @@ Created: September 2018
 - 2018-11-04: Optimised the JPEG decoder and the encoder to run 4k Pictures in about 20 seconds
 - 2018-11-04: Parallelized the quality factor execution and updated the bash script to account for this parallelism 
 - 2018-11-05: Added Inception ResNet V2 Group Running Python Sheet and optimised the JPEG decoder and the encoder for VS
+- 2018-11-23: FC stage begin: Added the neural network folder + fixed bugs with CMYK and non-parsebale pictures
+- 2018-12-03: FC: Model getting 92 Vs 91... learning rate after 150 decrease by 0.1... early stopping implemented one layer
+- 2018-12-04: FC: Base FC Model Generated and realize parallel running in QF's bottleneck collection
+- 2018-12-05: FC: Adding the predict for new architecture (WIP)
