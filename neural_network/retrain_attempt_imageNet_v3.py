@@ -389,8 +389,7 @@ def read_list_of_floats_from_file(file_path):
     s = struct.unpack('d' * BOTTLENECK_TENSOR_SIZE, f.read())  
   return list(s)  
   
-  
-bottleneck_path_2_bottleneck_values = {}  
+
   
 def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,  
                            image_dir, QF_dir, category, sess, jpeg_data_tensor, bottleneck_tensor):  
@@ -908,7 +907,6 @@ def main(_):
   # Labels for imagenet:
   # global node_uid_to_id
   # node_uid_to_id = load_gt()
-
   if not FLAGS.image_dir:
     tf.logging.error('Must set flag --image_dir.')
     return -1
@@ -960,7 +958,9 @@ def main(_):
   
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step, prediction = add_evaluation_step(  
-      final_tensor, ground_truth_input)  
+      final_tensor, ground_truth_input)
+
+
   # # Merge all the summaries and write them out to the summaries_dir ./v3_mul/retrain_logs(default)。  
   merged = tf.summary.merge_all()  
   train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/train',  
@@ -1052,7 +1052,7 @@ def main(_):
         patience_iter += 1
       
       # Early stop!
-      print('Patience iterations so far is %d and best validation_accuracy %f' % (patience_iter, validation_accuracy))
+      print('Patience iterations so far is %d and best validation_accuracy %f to be %f ' % (patience_iter, validation_accuracy, (1-best_v_error_so_far)))
       if patience_iter >= patience:
         # Train on the entire Training + Validation
         train_bottlenecks, train_ground_truth, _ = get_random_cached_bottlenecks(  
@@ -1115,7 +1115,8 @@ def main(_):
                  ground_truth_input: test_ground_truth})  
   print('Final test accuracy = %.1f%% (N=%d)' % (  
       test_accuracy * 100, len(test_bottlenecks)))  
-  
+
+
   if FLAGS.print_misclassified_test_images:  
     print('=== MISCLASSIFIED TEST IMAGES ===')  
     for i, test_filename in enumerate(test_filenames):  
@@ -1124,14 +1125,18 @@ def main(_):
                             list(image_lists.keys())[predictions[i]]))  
   
   # Write out the trained graph and labels with the weights stored as constants.
+  # output_graph_def = graph_util.convert_variables_to_constants(  
+  #     sess, graph.as_graph_def(), [FLAGS.final_tensor_name])  
+
+  # Write it this way because you need the accuracy results when you are predicting:
   output_graph_def = graph_util.convert_variables_to_constants(  
-      sess, graph.as_graph_def(), [FLAGS.final_tensor_name])  
+      sess, graph.as_graph_def(), [FLAGS.final_tensor_name, 'accuracy/accuracy/accuracy'])  
+
   with gfile.FastGFile(FLAGS.output_graph, 'wb') as f:  
     f.write(output_graph_def.SerializeToString())  
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:  
     f.write('\n'.join(image_lists.keys()) + '\n')  
-  
-  
+
 if __name__ == '__main__':  
   parser = argparse.ArgumentParser()  
   parser.add_argument(  

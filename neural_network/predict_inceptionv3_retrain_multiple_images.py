@@ -468,6 +468,8 @@ def printGraphOps(g):
   for op in g.get_operations():
   	print(op.name)
 
+# ground_truth_input: labels of the ground truth in one hot representation
+# predictions: predicted class index
 def calcTop1Rate(ground_truth_input, predictions):
 
   # Remove one hot representation (code to be improved)
@@ -547,10 +549,10 @@ def main(_):
     # printGraphOps(graph)
 
     # Get necessary operations to run the graph
-    prediction = graph.get_tensor_by_name('accuracy/correct_prediction/ArgMax:0')
-    evaluation_step = graph.get_tensor_by_name('accuracy/accuracy/accuracy:0')
-    ground_truth_input = graph.get_tensor_by_name('input/GroundTruthInput:0')
-    bottleneck_input = graph.get_tensor_by_name('input/BottleneckInputPlaceholder:0')
+    prediction          = graph.get_tensor_by_name('accuracy/correct_prediction/ArgMax:0')
+    evaluation_step     = graph.get_tensor_by_name('accuracy/accuracy/accuracy:0')
+    ground_truth_input  = graph.get_tensor_by_name('input/GroundTruthInput:0')
+    bottleneck_input    = graph.get_tensor_by_name('input/BottleneckInputPlaceholder:0')
 
     # We launch a Session -- Output after softmax
     #with tf.Session(graph=graph) as sess:
