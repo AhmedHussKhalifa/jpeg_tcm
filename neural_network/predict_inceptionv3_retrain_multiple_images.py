@@ -400,18 +400,6 @@ def run_bottleneck_on_image(sess, image_data_org, image_data_QF, image_data_tens
   return bottleneck_values
 
 
-def add_evaluation_step(result_tensor, ground_truth_tensor):  
-  with tf.name_scope('accuracy'):  
-    with tf.name_scope('correct_prediction'):  
-      prediction = tf.argmax(result_tensor, 1)
-      correct_prediction = tf.equal(  
-      prediction, tf.argmax(ground_truth_tensor, 1))
-    with tf.name_scope('accuracy'):  
-      evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))  
-      tf.summary.scalar('accuracy', evaluation_step)  
-  return evaluation_step, prediction  
-
-
 
 def get_test_cached_bottlenecks(sess, image_lists, how_many, category, bottleneck_dir, image_dir, QF_dir, jpeg_data_tensor, bottleneck_tensor):  
   class_count = len(image_lists.keys())  
