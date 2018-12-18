@@ -38,6 +38,8 @@ FLAGS = None
 # pylint：disable=line-too-long  
 DATA_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'  
 
+LABEL_LOOKUP_PATH = '/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inception_model/imagenet_2012_challenge_label_map_proto.pbtxt'
+
 # pylint: enable=line-too-long  
 BOTTLENECK_TENSOR_NAME = 'pool_3/_reshape:0'  
 MODEL_INPUT_WIDTH = 299  
@@ -61,7 +63,7 @@ WEIGHT_PENALTY = 0.01
 
 def load_gt():
   # uid to id which we define as Ground Truth
-  label_lookup_path = '../Attempts/inception_model/imagenet_2012_challenge_label_map_proto.pbtxt'
+  label_lookup_path = LABEL_LOOKUP_PATH
   # Load label look up file
   proto_as_ascii = tf.gfile.GFile(label_lookup_path).readlines()
   node_uid_to_id = {}
@@ -98,25 +100,35 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     print("Image directory '" + image_dir + "' not found.")  
     return None  
   result = {}  
-  sub_dirs = [x[0] for x in gfile.Walk(image_dir)]  
+  
+  # sub_dirs = [x[0] for x in gfile.Walk(image_dir)]  
+  # Create sub_dirs given our formatted sub_dirs (faster)
+  sub_dirs  = []
+  imageNetClassSize = 1000
+  print('Take care the number of classes are fixed to ', imageNetClassSize)
+  for i in range(1, imageNetClassSize + 1):
+    sub_dir = os.path.join(image_dir, str(i))
+    sub_dirs.append(sub_dir)
+    
   # 首先进入根目录，所以先跳过它。  
   is_root_dir = True  
   for sub_dir in sub_dirs:  
-    if is_root_dir:  
-      is_root_dir = False  
-      continue  
-    extensions = ['jpg', 'jpeg', 'JPG', 'JPEG']  
+
+    # New sub_dir way:
+    # if is_root_dir:  
+    #   is_root_dir = False  
+    #   continue  
+    # extensions = ['jpg', 'jpeg', 'JPG', 'JPEG']  
+    extensions = ['JPEG', 'jpg', 'jpeg', 'JPG']  
     file_list = []
 
-    # print(node_uid_to_id)
-    # exit(0)
+
     # class names
     dir_name = os.path.basename(sub_dir)  
-    # first_file = next(os.path.join(sub_dir, f) for f in os.listdir(sub_dir) if os.path.isfile(os.path.join(sub_dir, f)))
-    # uid = first_file.split('\\')[-1]
-    # uid = uid.split('_')[0]
-    # gt = str(node_uid_to_id[uid])
-
+    first_file = next(os.path.join(sub_dir, f) for f in os.listdir(sub_dir) if os.path.isfile(os.path.join(sub_dir, f)))
+    uid = first_file.split('/')[-1]
+    uid = uid.split('_')[0]
+    gt = str(node_uid_to_id[uid])
     if dir_name == image_dir:  
       continue
 
@@ -132,8 +144,9 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:  
       print('WARNING: Folder {} has more than {} images. Some images will '  
             'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))  
-    # label_name = re.sub(r'[^a-z0-9]+', ' ', gt.lower())  
-    label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower()) 
+    label_name = re.sub(r'[^a-z0-9]+', ' ', gt.lower())  
+
+    # label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower()) 
     training_images = []  
     testing_images = []  
     validation_images = []  
@@ -158,7 +171,7 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
                          (100.0 / MAX_NUM_IMAGES_PER_CLASS))  
       if percentage_hash < validation_percentage:  
         validation_images.append(base_name)  
-      elif percentage_hash < (testing_percentage + validation_percentage):  
+      elif percentage_hash < (testing_percentage + validation_percentage):
         testing_images.append(base_name)  
       else:  
         training_images.append(base_name)  
@@ -172,6 +185,7 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     # print('Training for %s is %d' % (label_name, len(training_images)))  
     # print('Validation for %s is %d' % (label_name, len(validation_images)))  
     # print('Testing for %s is %d' % (label_name, len(testing_images)))  
+
   return result  
   
   
@@ -238,9 +252,10 @@ def get_image_path_QF(image_lists, label_name, index, QF_dir, category , QF):
  base_name = category_list[mod_index].split('.')[0]
  middle = '-QF-'+ str(QF)+'.'
  suffix = category_list[mod_index].split('.')[1]
- qf_base_name =  base_name + middle + suffix
+ # qf_base_name =  base_name + middle + suffix
+ qf_base_name =  base_name + middle + suffix 
  sub_dir = label_lists['dir']
- full_path = os.path.join(QF_dir, sub_dir, qf_base_name)
+ full_path = os.path.join(QF_dir, sub_dir, base_name, qf_base_name)  # new folder structure
  return full_path
   
   
@@ -390,6 +405,59 @@ def read_list_of_floats_from_file(file_path):
   return list(s)  
   
 
+# for parallel read
+def read_image_data_qf(image_lists, label_name, index, QF_dir, category, QF, image_data_QF):
+  image_path_QF = get_image_path_QF(image_lists, label_name, index, QF_dir, category, QF)
+  counter = int(QF/QF_STEP_SIZE) - 1
+  if not gfile.Exists(image_path_QF):  
+    tf.logging.fatal('File does not exist %s', image_path_QF) 
+  image_data_QF[counter] = gfile.FastGFile(image_path_QF, 'rb').read()
+  return image_data_QF
+
+
+def create_bottleneck_file_parallel(bottleneck_path, image_lists, label_name, index,  
+                           image_dir, QF_dir, category, sess, jpeg_data_tensor, bottleneck_tensor):  
+  print('Creating bottleneck at ' + bottleneck_path)  
+  image_path = get_image_path(image_lists, label_name, index, image_dir, category)  
+  if not gfile.Exists(image_path):  
+    tf.logging.fatal('File does not exist %s', image_path)  
+  image_data_org = gfile.FastGFile(image_path, 'rb').read()
+
+  # New for 10 QF pictures
+  counter = 0;
+  image_data_QF = [None]*NUMBER_OF_QUALITY_FACTORS
+
+  # Read in parallel
+  # start = time.time()
+  results = Parallel(n_jobs=NUMBER_OF_QUALITY_FACTORS, verbose=0, backend='threading')(delayed(read_image_data_qf)
+    (image_lists, label_name, index, QF_dir, category, QF, image_data_QF) for QF in range(START_QF, END_QF, QF_STEP_SIZE))
+  
+  # print(image_data_QF)
+  # print(len(image_data_QF))
+  # print(np.array(image_data_QF).shape)
+
+  # end = time.time()
+  # print(end-start)
+
+
+  # start = time.time()
+  # for QF in range(START_QF, END_QF, QF_STEP_SIZE):
+  #   image_path_QF = get_image_path_QF(image_lists, label_name, index, QF_dir, category, QF)
+  #   # print (image_path ,'<-->', image_path_QF)
+  #   if not gfile.Exists(image_path_QF):  
+  #     tf.logging.fatal('File does not exist %s', image_path_QF)  
+  #   a = image_data_QF[counter]  
+  #   image_data_QF[counter] = gfile.FastGFile(image_path_QF, 'rb').read()
+  #   print(a==image_data_QF[counter])
+  #   counter += 1
+
+  # end = start - time.time()
+  # print(end)
+    
+  bottleneck_values = run_bottleneck_on_image(sess, image_data_org, image_data_QF, jpeg_data_tensor, bottleneck_tensor)  
+  bottleneck_string = ','.join(str(x) for x in bottleneck_values)  
+  with open(bottleneck_path, 'w') as bottleneck_file:  
+    bottleneck_file.write(bottleneck_string)
   
 def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,  
                            image_dir, QF_dir, category, sess, jpeg_data_tensor, bottleneck_tensor):  
@@ -405,8 +473,8 @@ def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,
   for QF in range(START_QF, END_QF, QF_STEP_SIZE):
     image_path_QF = get_image_path_QF(image_lists, label_name, index, QF_dir, category, QF)
     # print (image_path ,'<-->', image_path_QF)
-    if not gfile.Exists(image_path):  
-      tf.logging.fatal('File does not exist %s', image_path)  
+    if not gfile.Exists(image_path_QF):  
+      tf.logging.fatal('File does not exist %s', image_path_QF)  
     image_data_QF[counter] = gfile.FastGFile(image_path_QF, 'rb').read()
     counter += 1
 
@@ -449,6 +517,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir, QF
   bottleneck_path = get_bottleneck_path(image_lists, label_name, index, bottleneck_dir, category)  
   if not os.path.exists(bottleneck_path):  
     create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
+    # create_bottleneck_file_parallel(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
   with open(bottleneck_path, 'r') as bottleneck_file:  
     bottleneck_string = bottleneck_file.read()  
   did_hit_error = False  
@@ -459,6 +528,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir, QF
     did_hit_error = True  
   if did_hit_error:  
     create_bottleneck_file(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
+    # create_bottleneck_file_parallel(bottleneck_path, image_lists, label_name, index, image_dir, QF_dir,category, sess, jpeg_data_tensor, bottleneck_tensor)  
     with open(bottleneck_path, 'r') as bottleneck_file:  
       bottleneck_string = bottleneck_file.read()  
     #允许在这里传递异常，因为异常不应该发生在一个新的bottleneck创建之后。  
@@ -905,8 +975,8 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
 def main(_):
 
   # Labels for imagenet:
-  # global node_uid_to_id
-  # node_uid_to_id = load_gt()
+  global node_uid_to_id
+  node_uid_to_id = load_gt()
   if not FLAGS.image_dir:
     tf.logging.error('Must set flag --image_dir.')
     return -1
@@ -1172,8 +1242,8 @@ if __name__ == '__main__':
   parser.add_argument(  
       '--how_many_training_steps',  
       type=int,  
-      default=2000,  
-      # default=4000,  
+      # default=2000,  
+      default=4000,  
       help='How many training steps to run before ending.'  
   )  
   parser.add_argument(  
