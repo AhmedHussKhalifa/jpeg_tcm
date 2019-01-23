@@ -36,3 +36,6 @@ Created: September 2018
 - 2018-12-04: FC: Base FC Model Generated and realize parallel running in QF's bottleneck collection
 - 2018-12-05: FC: Adding the predict for new architecture (WIP)
 - 2018-12-18: FC: Commit the latest Bottleneck generation Python script for efficiency purpose
+- 2019-01-07: ImageNet Training Images Bottlenect generated with retrain_attempt_imagenet_v3.py
+- 2019-01-15: FC: Re-train architecture built and ready to retrain
+- 2019-01-22: ImageNet Validation Data Bottlenect generated with retrain_attempt_imagenet_v3.py
