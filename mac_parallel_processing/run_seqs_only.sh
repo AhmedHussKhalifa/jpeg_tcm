@@ -4,11 +4,15 @@
 # Number of Parallel tasks (make sure that they are multiples of 11 since we are running 11 QF per image)
 num_parallel_tasks=200
 
-for (( folder = 1; folder < 126; folder++ ))
+for (( folder = 1; folder < 2; folder++ ))
 do
-	
+  
 # Define the input path to files
-input_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/training_set_500/$folder
+# input_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/training_set_500/$folder
+# input_path_to_files=/Volumes/DATA/ml/test3
+# input_path_to_files=/Volumes/DATA/ml/test$folder
+# input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inceptionv3_flowers_QF/flower_photos/roses
+input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inceptionv3_flowers_QF/flower_photos/roses
 # input_path_to_files=/Volumes/DATA/ml/ImageNet_2nd
 # input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/tcm_analysis
 # input_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/set/set1
@@ -16,9 +20,12 @@ input_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/training_set_500/$
 
 # Define output path
 # output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/QF_exp/
-output_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/train_output_folder/$folder/
+# output_path_to_files=/Users/hossam.amer/Desktop/Projects/ML_TS/train_output_folder/$folder/
 # output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/my_Tools/jpeg_tcm/dataset/out_tcm_analysis/
-# output_path_to_files=/Volumes/DATA/ml/tcm_out5/
+
+# output_path_to_files=/Volumes/DATA/ml/out_test/
+output_path_to_files=/Users/hossam.amer/7aS7aS_Works/work/jpeg_ml_research/inceptionv3/inceptionv3_flowers_QF/flower_photos_QF/roses/
+mkdir $output_path_to_files
 
 
 
@@ -90,6 +97,10 @@ do
     # Run in Parallel - Sequence level parallelism
     group_id=$(($group_id + 1))
     echo -e '\n\n New Group of id' $group_id 'will start now...\n\n'
+    echo -e 'Folder id' $folder 'will start now for cmds...\n\n'
+    echo $commands_count
+    printf '%s\n' "${cmd_array[@]}"
+
 
     # start of the commands list is always zero
     start=0
@@ -103,6 +114,7 @@ do
   # Run in parallel
   while [  $start -lt $end ]; do {
     cmd="${cmd_array[start]}"
+    echo "BLA BLA"
     echo "Process \"$start\" \"$cmd\" started";
     $cmd & pid=$!
     PID_LIST+=" $pid";
@@ -138,6 +150,9 @@ if [ "$cmd_len" -lt "$num_parallel_tasks" ]; then
     # Run in Parallel - Sequence level parallelism
     group_id=$(($group_id + 1))
     echo -e '\n\n New Group of id' $group_id 'will start now for remaining cmds...\n\n'
+    echo -e 'Folder id' $folder 'will start now for remaining cmds...\n\n'
+    echo $cmd_len
+    printf '%s\n' "${cmd_array[@]}"
    
 
     # start of the commands list is always zero
@@ -190,6 +205,9 @@ echo 'Total number of jpeg files processed: ' $jpeg_files_count
 echo 'Total number of groups processed: ' $group_id
 # echo 'Total number of commands executed: ' $commands_count
 
+# Clear everything
+# unset $PID_LIST
+# unset $cmd_array
 
 done # folder loop
 #******#******#******#******#******#******#******#******#******#******
