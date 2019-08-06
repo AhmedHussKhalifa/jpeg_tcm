@@ -2944,7 +2944,7 @@ int jpeg_decoder::write_yuv_from_jpg_in_yuv(const std::string output_yuv_filenam
 
 	oss.clear(); oss.str("");
 	oss << name_file_only << "_" << jpegImageWidth << "x" << jpegImageHeight << ".yuv";
-	cout << "Success: " << oss.str() << " has been created!" << endl;
+	cout << "Success: " << oss.str() << " has been created! @write_yuv_from_jpg_in_yuv" << endl;
 	return 1;
 
 } // end write_yuv_from_jpg_in_yuv
@@ -2976,10 +2976,10 @@ int jpeg_decoder::write_yuv_from_jpg_in_csv(const std::string output_csv_name) {
 
 	oss.clear(); oss.str("");
 	oss << name_file_only << "_" << jpegImageWidth << "x" << jpegImageHeight << ".csv";
-	cout << "Success: " << oss.str() << " has been created!" << endl;
+	cout << "Success: " << oss.str() << " has been created! @write_yuv_from_jpg_in_csv" << endl;
 	return 1;
 
-} // end write_yuv_from_jpg_in_yuv
+} // end write_yuv_from_jpg_in_csv
 
 
 int jpeg_decoder::convert_jpg_to_bmp(const std::string output_bmp_filename) {
@@ -3047,7 +3047,7 @@ int jpeg_decoder::write_tcoeff_y_from_jpg_in_csv(const std::string output_csv_na
 
 	oss.clear(); oss.str("");
 	oss << name_file_only << "_" << comp_width << "x" << comp_height << ".csv";
-	cout << "Success: " << oss.str() << " has been created!" << endl;
+	cout << "Success: " << oss.str() << " has been created! @write_tcoeff_y_from_jpg_in_csv" << endl;
 	return 1;
 } // end write_tcoeff_y_from_jpg_in_csv
 

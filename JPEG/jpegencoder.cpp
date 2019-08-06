@@ -1996,7 +1996,6 @@ bool jpeg_encoder::savePicture() {
 
 	// copy & paste header directly
 	writeHeaderFromOriginalPicture(output);
-
 	// exit(0);
 
 	// SOS:

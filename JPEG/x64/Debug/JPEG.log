@@ -1,3 +1,86 @@
 ﻿  JPEG.cpp
-c:\users\y77jiang\onedrive - university of waterloo\5e. tcm-inception c++\jpeg_tcm\jpeg\jpeg.cpp(47): warning C4244: '=': conversion from 'intptr_t' to 'long', possible loss of data
-  JPEG.vcxproj -> C:\Users\y77jiang\OneDrive - University of Waterloo\5e. TCM-Inception C++\jpeg_tcm\x64\Debug\JPEG.exe
+d:\users\ahamsala\source\repos\jpeg_tcm\jpeg\jpeg.cpp(232): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(16707566): warning C4244: 'argument': conversion from '_Cv_TiD' to 'const int', possible loss of data
+          with
+          [
+              _Cv_TiD=unsigned __int64
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(16707566): note: see reference to function template instantiation 'void std::_Invoker_functor::_Call<_Cv_FD&,_Cv_TiD&,_Cv_TiD&,int&>(_Callable,_Cv_TiD &,_Cv_TiD &,int &) noexcept(false)' being compiled
+          with
+          [
+              _Cv_FD=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,
+              _Cv_TiD=unsigned __int64,
+              _Callable=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02> &
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(15732480): note: see reference to function template instantiation 'void std::invoke<_Cv_FD&,_Cv_TiD&,_Cv_TiD&,int&>(_Callable,_Cv_TiD &,_Cv_TiD &,int &) noexcept(false)' being compiled
+          with
+          [
+              _Cv_FD=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,
+              _Cv_TiD=unsigned __int64,
+              _Callable=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02> &
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\functional(1857): note: see reference to function template instantiation 'void std::_Invoker_ret<std::_Unforced,false>::_Call<_Cv_FD&,_Cv_TiD&,_Cv_TiD&,int&>(_Cv_FD &,_Cv_TiD &,_Cv_TiD &,int &)' being compiled
+          with
+          [
+              _Cv_FD=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,
+              _Cv_TiD=unsigned __int64
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\functional(1914): note: see reference to function template instantiation 'void std::_Call_binder<std::_Unforced,0,1,2,_Ty1,_Ty2,std::tuple<>>(std::_Invoker_ret<std::_Unforced,false>,std::integer_sequence<unsigned __int64,0,1,2>,_Cv_FD &,_Cv_tuple_TiD &,_Untuple &&)' being compiled
+          with
+          [
+              _Ty1=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,
+              _Ty2=std::tuple<unsigned __int64,unsigned __int64,int>,
+              _Cv_FD=runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,
+              _Cv_tuple_TiD=std::tuple<unsigned __int64,unsigned __int64,int>,
+              _Untuple=std::tuple<>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(16707566): note: see reference to function template instantiation 'void std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>::operator ()<>(void)' being compiled
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(16707566): note: see reference to function template instantiation 'void std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>::operator ()<>(void)' being compiled
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\type_traits(16707566): note: see reference to function template instantiation 'void std::_Invoker_functor::_Call<_Ty,>(_Callable &&) noexcept(false)' being compiled
+          with
+          [
+              _Ty=std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>,
+              _Callable=std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(237): note: see reference to function template instantiation 'void std::invoke<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>,>(_Callable &&) noexcept(false)' being compiled
+          with
+          [
+              _Callable=std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(246): note: see reference to function template instantiation 'void std::_LaunchPad<_Target>::_Execute<0>(std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>> &,std::integer_sequence<unsigned __int64,0>)' being compiled
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(245): note: see reference to function template instantiation 'void std::_LaunchPad<_Target>::_Execute<0>(std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>> &,std::integer_sequence<unsigned __int64,0>)' being compiled
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(242): note: while compiling class template member function 'void std::_LaunchPad<_Target>::_Run(std::_LaunchPad<_Target> *) noexcept'
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(230): note: see reference to function template instantiation 'void std::_LaunchPad<_Target>::_Run(std::_LaunchPad<_Target> *) noexcept' being compiled
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thr\xthread(257): note: see reference to class template instantiation 'std::_LaunchPad<_Target>' being compiled
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  c:\program files (x86)\microsoft visual studio\2017\enterprise\vc\tools\msvc\14.16.27023\include\thread(46): note: see reference to function template instantiation 'void std::_Launch<std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<_Ty>>>(_Thrd_t *,_Target &&)' being compiled
+          with
+          [
+              _Ty=std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,
+              _Target=std::unique_ptr<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>,std::default_delete<std::tuple<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>>>>
+          ]
+  d:\users\ahamsala\source\repos\jpeg_tcm\jpeg\jpegencodermultipleqf.h(81): note: see reference to function template instantiation 'std::thread::thread<std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>,,void>(_Fn &&)' being compiled
+          with
+          [
+              _Fn=std::_Binder<std::_Unforced,runEncoderWithMultipleQF::<lambda_8008e550edfd5afa76840beeb885ea02>,size_t,size_t,int &>
+          ]
+  JPEG.vcxproj -> D:\Users\ahamsala\source\repos\jpeg_tcm\x64\Debug\JPEG.exe
